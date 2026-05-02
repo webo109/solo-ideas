@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Solo — Ideas & Solutions</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+</head>
+
+<body>
+  <div class="blobs" aria-hidden="true">
+    <span class="blob blob--1"></span>
+    <span class="blob blob--2"></span>
+    <span class="blob blob--3"></span>
+  </div>
+
+  <div class="config-error" id="config-error" hidden>
+    <h2>Almost there</h2>
+    <p>Edit <code>src/config.js</code> with your Supabase project URL and anon key, then refresh.</p>
+    <p class="config-error__hint">Find them in your Supabase dashboard → Project Settings → API.</p>
+  </div>
+
+  <main class="app" id="app-shell">
+    <header class="header">
+      <p class="date" id="date"></p>
+      <h1 class="headline" id="headline">Solo<span class="headline__dot">!</span></h1>
+      <p class="tagline">Log problems. Find solutions.</p>
+      <button class="sign-out" id="sign-out" type="button" hidden aria-label="Sign out">⏻</button>
+    </header>
+
+    <section class="auth" id="auth" hidden>
+      <h2 class="auth__title">Sign in</h2>
+      <p class="auth__lede">A magic link will land in your inbox. One tap and you're in for months.</p>
+      <form class="auth__form" id="auth-form" autocomplete="on">
+        <input class="auth__input" id="auth-email" type="email" placeholder="you@example.com" required autocomplete="email" />
+        <button class="auth__btn" type="submit">Send link</button>
+      </form>
+      <p class="auth__status" id="auth-status" aria-live="polite"></p>
+    </section>
+
+    <form class="composer" id="composer" autocomplete="off" hidden>
+      <input class="composer__input" id="input" type="text"
+        placeholder="Describe a problem or idea and hit Enter…" maxlength="200" required />
+      <button class="composer__btn" type="submit" aria-label="Add task">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+          stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+      </button>
+    </form>
+
+    <ul class="list" id="list" hidden></ul>
+
+    <div class="empty" id="empty" hidden>
+      <span class="empty__emoji" aria-hidden="true">💡</span>
+      <p class="empty__text">All problems solved!</p>
+    </div>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+
+</html>
