@@ -1,124 +1,147 @@
 # Solo — Setup
 
-The code, schema, and deploy config are all done. This doc covers:
-
-- **First-time setup** (do once)
-- **Each new schema migration** (run when I push one)
-- **Optional: SMTP via Resend** to remove the magic-link email rate limit
-
----
-
-## First-time setup (already done if you're reading this)
-
-1. **Supabase project** created at https://supabase.com → URL + anon key wired into `src/config.js`
-2. **GitHub repo** at https://github.com/webo109/solo-ideas
-3. **Vercel project** auto-deploying `main` to https://solo-ideas.vercel.app
-4. **Vercel Deployment Protection** disabled (so the public URL is reachable)
-5. **Supabase Auth → URL Configuration** → Site URL set to `https://solo-ideas.vercel.app`
-
-If you ever need to set up a fresh project from this code, follow the original schema in `supabase/schema.sql` and the steps above.
+Sections:
+1. **Run the new migration** (`0004`) — required for docs reader, archive, AI fields, chat
+2. **Set up AI Edge Functions** (Supabase CLI + Gemini key) — required for AI organize / suggest / chat
+3. **Optional: Resend SMTP** — removes magic-link rate limit
+4. **Local dev**
 
 ---
 
-## Run migrations when I push them
+## 1. Run migration `0004` (required)
 
-Each time I add a `.sql` file under `supabase/migrations/`, paste it into the Supabase SQL Editor and run it.
+In your Supabase project:
 
-1. https://supabase.com/dashboard/project/dkdrhfwlknctmhnuaeop/sql/new
-2. **Clear** any existing SQL in the editor (Ctrl+A → Delete)
-3. Open the migration file from GitHub (e.g. https://raw.githubusercontent.com/webo109/solo-ideas/main/supabase/migrations/0003_projects_and_items.sql), copy everything
-4. Paste into the SQL Editor → click **Run**
+1. Open https://supabase.com/dashboard/project/dkdrhfwlknctmhnuaeop/sql/new
+2. **Clear** the editor (Ctrl+A → Delete)
+3. Open + copy the migration: https://raw.githubusercontent.com/webo109/solo-ideas/main/supabase/migrations/0004_pinned_organized_chat.sql
+4. Paste into editor → **Run**
 5. Expect: "Success. No rows returned."
 
-All migrations are idempotent — safe to run multiple times.
+Adds: `pinned`, `organized_text`, `ai_organized_at`, `ai_schedule`, `ai_last_run_at`, `ai_suggestions` to `items`; `ai_enabled` to `projects`; new `chat_threads` and `chat_messages` tables. **Idempotent** — safe to re-run.
 
-### Pending migrations
-
-| File | Status | Description |
-|---|---|---|
-| `0002_increase_text_limit.sql` | Run when ready | Bump idea text from 200 → 2000 chars |
-| `0003_projects_and_items.sql` | **Run before using new UI** | Adds projects + items tables, archive system, copies existing ideas into "Inbox" project |
-
-> Important: `0003` is **additive** — your `public.ideas` table is left intact. The migration only *copies* data into the new structure.
+> If you haven't run `0003` yet, run that first ([0003 link](https://raw.githubusercontent.com/webo109/solo-ideas/main/supabase/migrations/0003_projects_and_items.sql)).
 
 ---
 
-## (Recommended) Set up SMTP via Resend — removes the email rate limit
+## 2. AI Edge Functions (required for AI features)
 
-The default Supabase email service caps you at ~2 magic-link emails/hour. Setting up Resend gives you 100 emails/day for free, no card required.
+Three functions ship with this repo: `ai-organize`, `ai-suggest`, `ai-chat`. They live in `supabase/functions/` and need to be deployed to your Supabase project.
 
-### Step 1 — Create a Resend account (2 min)
+### 2.1 — Rotate the leaked Gemini key first
 
-1. Go to https://resend.com → **Sign up** (use GitHub login for speed)
-2. Verify your email when prompted
+⚠️ The key `AIzaSyBGcD2ZKXkUS-KmZqPgqg-5MhkxFT8XBFk` is in this chat's transcript. Treat as compromised.
 
-### Step 2 — Get an API key (30 sec)
+1. https://aistudio.google.com/app/apikey
+2. Find that key → click **⋮** → **Delete API key**
+3. Click **Create API key** → pick or create a project → **Copy** the new key
+4. **Don't paste it in chat.** Hold it for step 2.4 below.
 
-1. https://resend.com/api-keys → **Create API Key**
-2. Name it `Solo` · Permission: **Sending access** · Domain: **All domains**
-3. Click **Add** → **copy the key** (starts with `re_…`). You'll see it only once.
-4. **Don't paste it in chat.** Keep it in a notes app for the next step.
+### 2.2 — Install Supabase CLI
 
-### Step 3 — Pick a sender (choose one path)
+**Windows (PowerShell):**
+```powershell
+scoop install supabase
+```
+Or via npm:
+```bash
+npm install -g supabase
+```
+Verify: `supabase --version`
 
-**Path A — Use Resend's default `onboarding@resend.dev` (fastest, fine for personal use)**
-- No DNS setup needed
-- Limit: only sends to your own verified email (the one you signed up with)
-- Perfect for a single-user app — that's exactly your case
+### 2.3 — Link your local repo to the Supabase project (one time)
 
-**Path B — Verify your own domain (5 min, looks more professional)**
-- Resend → **Domains** → **Add Domain** → enter your domain
-- Add the DNS records they show (TXT, MX, DKIM) at your registrar
-- Wait for verification (usually < 5 min)
-- Use `noreply@yourdomain.com` as the sender
+From the Solo folder:
+```bash
+supabase login
+supabase link --project-ref dkdrhfwlknctmhnuaeop
+```
+The `login` command opens your browser to authorize the CLI.
 
-For a single-user productivity app, **Path A is plenty**.
+### 2.4 — Set the Gemini key as a function secret
 
-### Step 4 — Plug into Supabase (1 min)
+```bash
+supabase secrets set GEMINI_API_KEY=PASTE_YOUR_NEW_KEY_HERE
+```
+Optionally also:
+```bash
+supabase secrets set GEMINI_MODEL=gemini-2.0-flash-exp
+```
+Verify:
+```bash
+supabase secrets list
+```
+The key value is masked — you'll only see `GEMINI_API_KEY` listed.
 
-1. https://supabase.com/dashboard/project/dkdrhfwlknctmhnuaeop/settings/auth
-2. Scroll to **SMTP Settings** (or **Custom SMTP**)
-3. Toggle **Enable Custom SMTP** → ON
-4. Fill in:
-   - **Sender email**: `onboarding@resend.dev` (Path A) or your verified address (Path B)
+### 2.5 — Deploy the three functions
+
+```bash
+supabase functions deploy ai-organize --no-verify-jwt=false
+supabase functions deploy ai-suggest  --no-verify-jwt=false
+supabase functions deploy ai-chat     --no-verify-jwt=false
+```
+The `--no-verify-jwt=false` flag (which is the default) keeps Supabase Auth's JWT check on, so only signed-in users can call them.
+
+### 2.6 — Test it
+
+1. Open the deployed app, sign in
+2. Go to a project → click ✎ (edit) → toggle **Enable AI for this project** → Save
+3. Click the **💬** chat icon in the topbar → ask "what's open in this project?"
+4. The chat should stream a response.
+
+If you see an error banner like "ai-chat: 401" or "GEMINI_API_KEY is not set", revisit step 2.4 (secret) and 2.5 (deploy).
+
+---
+
+## 3. (Optional) Resend SMTP — removes magic-link email rate limit
+
+Default Supabase email service caps at ~2 magic links/hour. Resend free tier gives 100/day.
+
+### 3.1 — Resend account + API key
+
+1. https://resend.com → Sign up (GitHub login fastest)
+2. https://resend.com/api-keys → **Create API Key** · permission **Sending access** · domain **All domains** → **Add**
+3. Copy the `re_…` key. Don't paste it in chat — keep it in a notes app.
+
+### 3.2 — Plug into Supabase
+
+1. https://supabase.com/dashboard/project/dkdrhfwlknctmhnuaeop/settings/auth → scroll to **SMTP Settings**
+2. Toggle **Enable Custom SMTP** → ON
+3. Fill:
+   - **Sender email**: `onboarding@resend.dev` (single-user, no DNS) or your verified domain address
    - **Sender name**: `Solo`
    - **Host**: `smtp.resend.com`
    - **Port**: `465`
    - **Username**: `resend`
-   - **Password**: paste the API key from Step 2 (starts with `re_…`)
-   - **Minimum interval between emails**: `0` (or whatever Supabase shows)
-5. Click **Save**
-
-### Step 5 — Test
-
-1. Sign out of the app
-2. Sign in with your email
-3. Magic link should arrive within seconds, no rate-limit error
-
-If it doesn't work:
-- Path A: confirm the email you used to sign up for Resend is the *same* email you're trying to magic-link
-- Check Supabase Auth logs: dashboard → **Logs** → **Auth Logs**
+   - **Password**: your `re_…` API key
+4. **Save**
 
 ---
 
-## Local development
+## 4. Local development
 
 ```bash
 python3 -m http.server 8765
 ```
+Open `http://localhost:8765/`. ES modules require a server.
 
-Then `http://localhost:8765/`. ES modules require a server (won't work via `file://`).
-
-For magic-link sign-in to redirect back to localhost, ensure `http://localhost:8765/**` is in your **Auth → URL Configuration → Redirect URLs**.
+For magic-link sign-in to redirect back to localhost, ensure `http://localhost:8765/**` is in **Auth → URL Configuration → Redirect URLs**.
 
 ---
 
-## After Solo's first sign-in: lock down signups
+## 5. After your first sign-in: lock down signups
 
-Once you've signed in once and your user exists in Supabase:
+Supabase → **Authentication → Sign In / Up Providers → Email** → toggle off **Allow new users to sign up** → **Save**. Now only your existing user can request magic links.
 
-1. **Authentication → Sign In / Up Providers → Email**
-2. Toggle **Allow new users to sign up** → **OFF**
-3. Save
+---
 
-This means only you (existing user) can ever request magic links. New emails get rejected.
+## Files reference
+
+| Where | What |
+|---|---|
+| `src/config.js` | Public Supabase URL + anon key (safe to commit) |
+| `src/api.js` | CRUD for projects, items, chat threads, chat messages |
+| `src/ai.js` | Calls Edge Functions (organize, suggest, chat stream) |
+| `supabase/migrations/000*.sql` | Database migrations — run in order |
+| `supabase/functions/ai-*` | Edge Functions — deploy via `supabase functions deploy <name>` |
+| `supabase/functions/_shared/` | Shared helpers (CORS, auth, Gemini client) |

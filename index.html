@@ -33,7 +33,10 @@
     <p class="config-error__hint">Find them in your Supabase dashboard → Project Settings → API.</p>
   </div>
 
-  <!-- ================= Auth screen ================= -->
+  <!-- Floating AI status / error banner -->
+  <div class="ai-banner" id="ai-banner" hidden></div>
+
+  <!-- Auth screen -->
   <section class="auth-screen" id="auth" hidden>
     <div class="auth-card">
       <h1 class="auth__brand">Solo<span class="headline__dot">!</span></h1>
@@ -46,10 +49,8 @@
     </div>
   </section>
 
-  <!-- ================= App shell ================= -->
+  <!-- App shell -->
   <main class="app" id="app-shell" hidden>
-
-    <!-- Topbar -->
     <header class="topbar">
       <div class="topbar__left">
         <h1 class="brand">Solo<span class="headline__dot">!</span></h1>
@@ -57,79 +58,63 @@
       </div>
       <div class="topbar__right">
         <span class="streak" id="streak" hidden>🔥 <span id="streak-count">0</span> this week</span>
+        <button class="icon-btn" id="chat-btn" type="button" aria-label="Solo Chat" title="Solo Chat">💬</button>
         <button class="icon-btn" id="sign-out" type="button" aria-label="Sign out" title="Sign out">⏻</button>
       </div>
     </header>
 
     <div class="layout">
-
-      <!-- ============ Sidebar (Projects) ============ -->
       <aside class="sidebar" id="sidebar">
         <div class="sidebar__header">
           <span class="sidebar__title">Projects</span>
-          <button class="icon-btn icon-btn--small" id="new-project-btn" type="button"
-            aria-label="New project" title="New project">+</button>
+          <button class="icon-btn icon-btn--small" id="new-project-btn" type="button" aria-label="New project" title="New project">+</button>
         </div>
         <ul class="proj-list" id="proj-list"></ul>
       </aside>
 
-      <!-- ============ Main panel ============ -->
       <section class="panel" id="panel">
-
-        <!-- Project header -->
         <header class="panel__header" id="panel-header" hidden>
           <div class="panel__title-wrap">
             <span class="panel__dot" id="panel-dot"></span>
-            <h2 class="panel__title" id="panel-title" contenteditable="false" spellcheck="false"></h2>
-            <button class="icon-btn icon-btn--ghost" id="rename-btn" type="button"
-              aria-label="Rename project" title="Rename">✎</button>
-            <button class="icon-btn icon-btn--ghost icon-btn--danger" id="delete-btn" type="button"
-              aria-label="Delete project" title="Delete project">🗑</button>
+            <h2 class="panel__title" id="panel-title"></h2>
+            <button class="icon-btn icon-btn--ghost" id="rename-btn" type="button" aria-label="Edit project" title="Edit">✎</button>
+            <button class="icon-btn icon-btn--ghost icon-btn--danger" id="delete-btn" type="button" aria-label="Delete project" title="Delete project">🗑</button>
           </div>
           <p class="panel__meta" id="panel-meta"></p>
         </header>
 
-        <!-- Daily review banner -->
         <div class="banner" id="banner" hidden></div>
 
-        <!-- View toggle: Active / Archive -->
         <div class="view-toggle" id="view-toggle" hidden>
           <button class="vt-btn active" data-view="active" type="button">Active</button>
           <button class="vt-btn" data-view="archive" type="button">Archive</button>
         </div>
 
-        <!-- Kind tabs -->
         <nav class="kind-tabs" id="kind-tabs" hidden>
-          <button class="kind-tab active" data-kind="note"  type="button">📝 Notes <span class="kind-count" data-kind-count="note">0</span></button>
-          <button class="kind-tab"        data-kind="idea"  type="button">💡 Ideas <span class="kind-count" data-kind-count="idea">0</span></button>
-          <button class="kind-tab"        data-kind="task"  type="button">✓ Tasks <span class="kind-count" data-kind-count="task">0</span></button>
-          <button class="kind-tab"        data-kind="doc"   type="button">📚 Docs  <span class="kind-count" data-kind-count="doc">0</span></button>
+          <button class="kind-tab active" data-kind="note" type="button">📝 Notes <span class="kind-count" data-kind-count="note">0</span></button>
+          <button class="kind-tab" data-kind="idea" type="button">💡 Ideas <span class="kind-count" data-kind-count="idea">0</span></button>
+          <button class="kind-tab" data-kind="task" type="button">✓ Tasks <span class="kind-count" data-kind-count="task">0</span></button>
+          <button class="kind-tab" data-kind="doc"  type="button">📚 Docs  <span class="kind-count" data-kind-count="doc">0</span></button>
         </nav>
 
-        <!-- Composer (active view only) -->
         <form class="composer" id="composer" autocomplete="off" hidden>
-          <textarea class="composer__input" id="input" rows="1"
-            placeholder="Capture something…" maxlength="5000" required></textarea>
+          <textarea class="composer__input" id="input" rows="1" placeholder="Capture something…" maxlength="5000" required></textarea>
           <button class="composer__btn" type="submit" aria-label="Add">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <line x1="12" y1="5" x2="12" y2="19"></line>
               <line x1="5" y1="12" x2="19" y2="12"></line>
             </svg>
           </button>
         </form>
 
-        <!-- Items list -->
         <ul class="list" id="list" hidden></ul>
 
-        <!-- Empty state -->
         <div class="empty" id="empty" hidden>
           <span class="empty__emoji" aria-hidden="true">💡</span>
           <p class="empty__text" id="empty-text">Nothing here yet.</p>
           <p class="empty__hint" id="empty-hint"></p>
         </div>
 
-        <!-- No project selected -->
         <div class="welcome" id="welcome" hidden>
           <h2>Welcome to Solo</h2>
           <p>Pick a project on the left, or click <strong>+</strong> to create one.</p>
@@ -138,7 +123,7 @@
     </div>
   </main>
 
-  <!-- ============ Project create / edit modal ============ -->
+  <!-- Project create / edit modal -->
   <div class="modal" id="proj-modal" hidden>
     <div class="modal__backdrop" data-modal-close></div>
     <div class="modal__card">
@@ -152,6 +137,13 @@
           <span>Color</span>
           <div class="color-row" id="color-row"></div>
         </label>
+        <label class="modal__field modal__field--check">
+          <input type="checkbox" id="proj-ai" />
+          <span class="modal__check-label">
+            <strong>Enable AI for this project</strong>
+            <small>Items in this project can be sent to Gemini for organize / suggest / chat. Privacy gate — off by default.</small>
+          </span>
+        </label>
         <div class="modal__actions">
           <button type="button" class="btn-ghost" data-modal-close>Cancel</button>
           <button type="submit" class="btn-primary" id="proj-save">Create</button>
@@ -160,7 +152,7 @@
     </div>
   </div>
 
-  <!-- ============ Confirm modal ============ -->
+  <!-- Confirm modal -->
   <div class="modal" id="confirm-modal" hidden>
     <div class="modal__backdrop" data-confirm-close></div>
     <div class="modal__card">
@@ -172,6 +164,55 @@
       </div>
     </div>
   </div>
+
+  <!-- Reader modal (for Docs) -->
+  <div class="modal modal--reader" id="reader-modal" hidden>
+    <div class="modal__backdrop" data-reader-close></div>
+    <div class="modal__card modal__card--reader">
+      <header class="reader__head">
+        <div class="reader__title-area">
+          <h3 class="reader__title" id="reader-title"></h3>
+          <p class="reader__sub" id="reader-sub"></p>
+        </div>
+        <div class="reader__actions">
+          <button class="btn-sm" id="reader-toggle" type="button" hidden>Show original</button>
+          <button class="btn-sm" id="reader-organize" type="button" title="Re-run AI organize">✨ Re-organize</button>
+          <button class="btn-sm" id="reader-edit-btn" type="button">Edit</button>
+          <button class="btn-sm" id="reader-archive" type="button" title="Move to archive">Archive</button>
+          <button class="btn-sm" type="button" data-reader-close>×</button>
+        </div>
+      </header>
+      <div class="reader__body" id="reader-body"></div>
+      <div class="reader__edit" id="reader-edit" hidden>
+        <textarea id="reader-textarea" maxlength="5000"
+          placeholder="# Title on first line&#10;&#10;Body in Markdown…"></textarea>
+        <div class="reader__edit-actions">
+          <button class="btn-ghost" type="button" id="reader-cancel-btn">Cancel</button>
+          <button class="btn-primary" type="button" id="reader-save-btn">Save (AI organizes)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Solo Chat panel (slide-out from right) -->
+  <aside class="chat" id="chat-panel" hidden>
+    <header class="chat__head">
+      <div class="chat__title">
+        <span>💬 Solo Chat</span>
+        <select class="chat__sel" id="chat-thread-sel" aria-label="Thread"></select>
+      </div>
+      <div class="chat__actions">
+        <button class="btn-sm" id="chat-new-btn" type="button" title="Today's thread">Today</button>
+        <button class="btn-sm" id="chat-close" type="button" aria-label="Close">×</button>
+      </div>
+    </header>
+    <div class="chat__messages" id="chat-messages"></div>
+    <form class="chat__form" id="chat-form" autocomplete="off">
+      <textarea class="chat__input" id="chat-input" rows="1"
+        placeholder="Ask me anything about your projects…" maxlength="4000" required></textarea>
+      <button type="submit" class="chat__send" aria-label="Send">➤</button>
+    </form>
+  </aside>
 
   <script type="module" src="app.js"></script>
 </body>
