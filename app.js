@@ -395,7 +395,7 @@ async function persistSolution(id, newSolution) {
   if (idea.solution === value) return;
   const prev = idea.solution;
   idea.solution = value;
-  if (!value) render();
+  render();
   try {
     await Store.updateIdea(id, { solution: value });
   } catch (e) {
@@ -470,13 +470,8 @@ $list.addEventListener('submit', (e) => {
     const ideaId = form.dataset.id;
     const solution = input.value.trim();
     if (solution) {
-      const idea = state.ideas.find((x) => x.id === ideaId);
-      if (idea) {
-        idea.solution = solution;
-        addingSolutionId = null;
-        render();
-        persistSolution(ideaId, solution);
-      }
+      addingSolutionId = null;
+      persistSolution(ideaId, solution);
     }
   }
 });
