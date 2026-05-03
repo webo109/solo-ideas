@@ -387,10 +387,11 @@ function itemNode(it) {
   li.dataset.id = it.id;
 
   const isArchive = state.currentView === 'archive';
+  if (isArchive) li.classList.add('item--archive');
   const showSolution = it.kind === 'idea';
 
   li.innerHTML = `
-    <button class="item__handle" type="button" aria-label="Drag to reorder" ${isArchive ? 'hidden' : ''}>⋮⋮</button>
+    ${isArchive ? '' : '<button class="item__handle" type="button" aria-label="Drag to reorder">⋮⋮</button>'}
     <button class="item__check item__check--${it.status}" type="button"
       aria-label="Cycle status" title="open → today → archive">
       <span class="item__check-mark"></span>

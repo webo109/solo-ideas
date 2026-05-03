@@ -282,11 +282,14 @@ input, textarea {
 /* ===== Items list ===== */
 .list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 .item {
-  display: grid; grid-template-columns: 24px 26px 1fr auto; gap: 12px; align-items: start;
+  display: grid; grid-template-columns: 24px 26px minmax(0, 1fr) auto; gap: 12px; align-items: start;
   padding: 14px 16px;
   background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--glass-border); border-radius: 16px;
   transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.item.item--archive {
+  grid-template-columns: 26px minmax(0, 1fr) auto;
 }
 .item:hover { background: var(--glass-hover); border-color: rgba(255,255,255,0.13); transform: translateY(-1px); }
 .item--entering { animation: springIn 0.45s var(--spring); }
