@@ -8,7 +8,7 @@ create extension if not exists "uuid-ossp";
 create table if not exists public.ideas (
   id          uuid primary key default uuid_generate_v4(),
   user_id     uuid not null references auth.users(id) on delete cascade,
-  text        text not null check (char_length(text) between 1 and 200),
+  text        text not null check (char_length(text) between 1 and 2000),
   solution    text check (solution is null or char_length(solution) between 1 and 1000),
   done        boolean not null default false,
   position    double precision not null,

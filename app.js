@@ -408,11 +408,31 @@ async function persistSolution(id, newSolution) {
 
 // ---------- Events ----------
 
+function autoGrowInput() {
+  if (!$input) return;
+  $input.style.height = 'auto';
+  $input.style.height = Math.min($input.scrollHeight, 240) + 'px';
+}
+
 $form.addEventListener('submit', (e) => {
   e.preventDefault();
   addTask($input.value);
   $input.value = '';
+  autoGrowInput();
   $input.focus();
+});
+
+$input.addEventListener('input', autoGrowInput);
+
+$input.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+    e.preventDefault();
+    if (typeof $form.requestSubmit === 'function') {
+      $form.requestSubmit();
+    } else {
+      $form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+    }
+  }
 });
 
 $list.addEventListener('click', (e) => {

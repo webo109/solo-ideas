@@ -38,7 +38,7 @@ export async function migrateLocalStorageIfNeeded(userId) {
   for (const idea of reversed) {
     try {
       await createIdea(userId, {
-        text: String(idea.text ?? '').slice(0, 200),
+        text: String(idea.text ?? '').slice(0, 2000),
         solution: idea.solution ? String(idea.solution).slice(0, 1000) : null,
         done: !!idea.done,
         position: (count + 1) * 1000,

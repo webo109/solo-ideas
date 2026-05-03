@@ -116,11 +116,17 @@ input {
   transform: translateY(-2px);
 }
 .composer__input {
-  flex: 1; background: transparent; border: 0; outline: none; padding: 16px 0; font-size: 1.1rem; font-weight: 400;
+  flex: 1; background: transparent; border: 0; outline: none;
+  padding: 16px 0; font-size: 1.1rem; font-weight: 400;
+  font-family: inherit; line-height: 1.5;
+  resize: none; overflow: hidden;
+  min-height: 26px; max-height: 240px;
 }
 .composer__input::placeholder {
   color: var(--text-muted);
 }
+.composer { align-items: flex-end; }
+.composer__btn { margin-bottom: 4px; }
 .composer__btn {
   width: 50px; height: 50px; border-radius: 18px;
   background: var(--pop-gradient); color: #fff;
