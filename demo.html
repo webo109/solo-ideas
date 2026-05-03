@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Solo — Architecture Options</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;800&display=swap" rel="stylesheet" />
+  <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+  <meta name="theme-color" content="#0a0a0f" />
+  <style>
+    :root {
+      --bg-base: #0a0a0f;
+      --text-main: #f8f9fa;
+      --text-muted: #a0aabf;
+      --text-dim: #6b7387;
+      --glass-bg: rgba(255,255,255,0.04);
+      --glass-border: rgba(255,255,255,0.08);
+      --pop: #7f00ff;
+      --pop2: #e100ff;
+      --pop3: #00d2ff;
+      --pop-grad: linear-gradient(135deg, var(--pop), var(--pop2));
+      --shadow-glow: 0 0 20px rgba(127,0,255,0.3);
+      --c-uni:    #ffd23f;
+      --c-sakni:  #00d2ff;
+      --c-biz:    #7f00ff;
+      --c-life:   #5cd6c0;
+      --c-learn:  #ff5d8f;
+      --c-tech:   #f97316;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Outfit', system-ui, sans-serif;
+      background: var(--bg-base);
+      color: var(--text-main);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background:
+        radial-gradient(circle at 20% 0%, rgba(127,0,255,0.15), transparent 50%),
+        radial-gradient(circle at 100% 100%, rgba(225,0,255,0.10), transparent 50%);
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    .page {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 6vh 24px 80px;
+    }
+
+    .topbar {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 32px;
+    }
+    .back {
+      color: var(--text-muted); text-decoration: none;
+      font-size: 0.92rem; padding: 8px 14px; border-radius: 10px;
+      border: 1px solid var(--glass-border); background: var(--glass-bg);
+      transition: all 0.2s ease;
+    }
+    .back:hover { color: #fff; border-color: rgba(225,0,255,0.4); }
+
+    h1 {
+      font-size: clamp(2.2rem, 5vw, 3.4rem); font-weight: 800;
+      letter-spacing: -0.02em; margin: 0 0 12px;
+      background: linear-gradient(to right, #fff, #a0aabf);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    h1 span {
+      background: var(--pop-grad);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .lede {
+      color: var(--text-muted); font-size: 1.08rem; max-width: 720px;
+      line-height: 1.6; margin: 0 0 36px;
+    }
+
+    /* Switcher */
+    .switcher {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      background: var(--glass-bg); border: 1px solid var(--glass-border);
+      border-radius: 18px; padding: 8px; margin-bottom: 28px;
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    }
+    .sw {
+      flex: 1; min-width: 180px;
+      padding: 14px 18px; border-radius: 12px;
+      background: transparent; border: 0; color: var(--text-muted);
+      font-family: inherit; font-size: 0.95rem; font-weight: 500;
+      cursor: pointer; transition: all 0.25s ease;
+      text-align: left;
+    }
+    .sw:hover { color: #fff; background: rgba(255,255,255,0.04); }
+    .sw.active {
+      background: var(--pop-grad); color: #fff;
+      box-shadow: 0 4px 18px rgba(225,0,255,0.35);
+    }
+    .sw small { display: block; font-weight: 400; opacity: 0.75; margin-top: 2px; font-size: 0.78rem; }
+
+    /* Two-column layout */
+    .stage {
+      display: grid; grid-template-columns: minmax(0, 1fr) 320px;
+      gap: 24px; align-items: start;
+    }
+    @media (max-width: 980px) {
+      .stage { grid-template-columns: 1fr; }
+    }
+
+    /* Mockup card */
+    .mockup {
+      background: var(--glass-bg); border: 1px solid var(--glass-border);
+      border-radius: 24px; padding: 28px;
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+      min-height: 580px;
+    }
+
+    .pros {
+      background: var(--glass-bg); border: 1px solid var(--glass-border);
+      border-radius: 24px; padding: 24px;
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      position: sticky; top: 24px;
+    }
+    .pros h3 { margin: 0 0 6px; font-size: 1.15rem; font-weight: 700; }
+    .pros .meta { color: var(--text-dim); font-size: 0.85rem; margin: 0 0 18px; }
+    .pros h4 { margin: 14px 0 6px; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); }
+    .pros ul { margin: 0; padding-left: 20px; }
+    .pros li { color: var(--text-muted); font-size: 0.92rem; line-height: 1.55; margin-bottom: 4px; }
+    .pros li strong { color: #fff; font-weight: 500; }
+    .pick-btn {
+      display: block; width: 100%; margin-top: 20px;
+      padding: 12px 16px; border-radius: 12px;
+      background: var(--pop-grad); color: #fff;
+      font-family: inherit; font-weight: 600; font-size: 0.95rem;
+      border: 0; cursor: pointer; text-align: center;
+      box-shadow: 0 4px 18px rgba(225,0,255,0.35);
+      transition: transform 0.2s ease;
+    }
+    .pick-btn:hover { transform: translateY(-1px); }
+
+    /* Hide all options except active */
+    .option { display: none; }
+    .option.active { display: block; }
+
+    /* ============ Mockup primitives ============ */
+
+    .mock-toolbar {
+      display: flex; gap: 8px; flex-wrap: wrap;
+      padding-bottom: 16px; margin-bottom: 16px;
+      border-bottom: 1px solid var(--glass-border);
+    }
+    .chip {
+      padding: 6px 12px; border-radius: 100px; font-size: 0.85rem;
+      background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border);
+      color: var(--text-muted); cursor: pointer; user-select: none;
+      transition: all 0.2s ease;
+    }
+    .chip.active {
+      background: var(--pop-grad); color: #fff; border-color: transparent;
+    }
+    .chip-count { opacity: 0.7; margin-left: 4px; }
+
+    .item {
+      display: grid; grid-template-columns: 28px 28px 1fr auto;
+      gap: 14px; align-items: center;
+      padding: 14px 16px;
+      background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      margin-bottom: 10px;
+      transition: all 0.25s ease;
+    }
+    .item:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); }
+    .item.done { opacity: 0.5; }
+    .item .text {
+      font-size: 1rem; line-height: 1.4;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .item.done .text { text-decoration: line-through; }
+    .icon { display: grid; place-items: center; font-size: 1rem; }
+    .check {
+      width: 22px; height: 22px; border-radius: 50%;
+      border: 2px solid var(--text-muted); display: grid; place-items: center;
+      font-size: 0.7rem; color: transparent;
+    }
+    .check.todo { border-color: var(--text-muted); }
+    .check.today { border-color: var(--pop2); background: rgba(225,0,255,0.15); color: var(--pop2); }
+    .check.today::after { content: '◐'; }
+    .check.done { background: var(--pop-grad); border-color: transparent; color: #fff; }
+    .check.done::after { content: '✓'; }
+    .tag {
+      font-size: 0.72rem; font-weight: 600; padding: 3px 10px;
+      border-radius: 100px; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .tag-uni    { background: rgba(255,210,63,0.15);  color: var(--c-uni); border: 1px solid rgba(255,210,63,0.3); }
+    .tag-sakni  { background: rgba(0,210,255,0.15);   color: var(--c-sakni); border: 1px solid rgba(0,210,255,0.3); }
+    .tag-biz    { background: rgba(127,0,255,0.18);   color: #b485ff; border: 1px solid rgba(127,0,255,0.4); }
+    .tag-life   { background: rgba(92,214,192,0.15);  color: var(--c-life); border: 1px solid rgba(92,214,192,0.3); }
+    .tag-learn  { background: rgba(255,93,143,0.15);  color: var(--c-learn); border: 1px solid rgba(255,93,143,0.3); }
+    .tag-tech   { background: rgba(249,115,22,0.15);  color: var(--c-tech); border: 1px solid rgba(249,115,22,0.3); }
+    .kind {
+      font-size: 0.7rem; padding: 3px 8px; border-radius: 6px;
+      background: rgba(255,255,255,0.07); color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;
+    }
+    .solution {
+      grid-column: 3 / 4; margin-top: 6px;
+      font-size: 0.88rem; color: var(--pop3);
+      background: rgba(0,210,255,0.08); padding: 8px 12px; border-radius: 8px;
+      border: 1px solid rgba(0,210,255,0.2);
+    }
+    .item.has-sol { grid-template-columns: 28px 28px 1fr auto; }
+    .item.has-sol > .text { grid-column: 3 / 4; }
+
+    /* Tabs */
+    .tabs {
+      display: flex; gap: 4px;
+      padding: 6px; border-radius: 14px;
+      background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border);
+      margin-bottom: 20px; width: fit-content;
+    }
+    .tab {
+      padding: 10px 22px; border-radius: 10px; cursor: pointer;
+      font-size: 0.92rem; font-weight: 500; color: var(--text-muted);
+      transition: all 0.2s ease; user-select: none;
+    }
+    .tab.active { background: var(--pop-grad); color: #fff; }
+
+    /* Sidebar (Projects) */
+    .layout {
+      display: grid; grid-template-columns: 220px 1fr;
+      gap: 20px; align-items: start;
+    }
+    @media (max-width: 720px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+    .sidebar {
+      padding: 12px; border-radius: 14px;
+      background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border);
+    }
+    .sidebar-title {
+      padding: 6px 10px 12px;
+      font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px;
+      color: var(--text-dim); font-weight: 600;
+      border-bottom: 1px solid var(--glass-border); margin-bottom: 8px;
+    }
+    .proj {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 10px; border-radius: 10px; cursor: pointer;
+      font-size: 0.93rem; color: var(--text-muted); transition: all 0.2s ease;
+    }
+    .proj:hover { background: rgba(255,255,255,0.05); color: #fff; }
+    .proj.active { background: rgba(127,0,255,0.18); color: #fff; }
+    .proj-dot {
+      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+    }
+    .proj-count {
+      margin-left: auto; font-size: 0.78rem; color: var(--text-dim);
+    }
+    .new-proj {
+      margin-top: 10px; padding: 9px 10px; border-radius: 10px;
+      font-size: 0.88rem; color: var(--text-dim); cursor: pointer;
+      border: 1px dashed var(--glass-border); text-align: center;
+    }
+    .new-proj:hover { color: #fff; border-color: var(--pop2); }
+
+    .panel-header {
+      display: flex; justify-content: space-between; align-items: baseline;
+      margin-bottom: 14px;
+    }
+    .panel-title {
+      font-size: 1.4rem; font-weight: 700; margin: 0;
+    }
+    .panel-sub {
+      color: var(--text-dim); font-size: 0.88rem; margin: 0;
+    }
+
+    /* Daily review banner */
+    .banner {
+      background: linear-gradient(135deg, rgba(127,0,255,0.15), rgba(225,0,255,0.1));
+      border: 1px solid rgba(225,0,255,0.3);
+      border-radius: 14px; padding: 14px 18px; margin-bottom: 18px;
+      font-size: 0.92rem; line-height: 1.5;
+    }
+    .banner strong { color: var(--pop2); }
+    .streak {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(255,93,143,0.15); border: 1px solid rgba(255,93,143,0.3);
+      color: var(--c-learn); padding: 4px 10px; border-radius: 100px;
+      font-size: 0.82rem; font-weight: 600; margin-left: 10px;
+    }
+
+    /* Footer note */
+    .note {
+      margin-top: 36px; padding: 18px;
+      border: 1px dashed var(--glass-border); border-radius: 12px;
+      color: var(--text-muted); font-size: 0.9rem; line-height: 1.6;
+    }
+    .note code {
+      background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px;
+      font-size: 0.86em;
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="topbar">
+      <a class="back" href="/">← Back to Solo</a>
+      <span class="streak">🔥 5 solved this week</span>
+    </div>
+
+    <h1>Choose Your <span>Solo</span></h1>
+    <p class="lede">
+      Four ways to structure the app for your two workflows: <strong style="color:#fff">capturing business ideas</strong> (the original purpose, problem→solution, revisit later) and <strong style="color:#fff">daily productivity</strong> across uni, sakni, your business, learning, and life.
+      Each option below uses the <em>same sample content</em> so you can compare them apples-to-apples. Pick one and I'll ship it.
+    </p>
+
+    <nav class="switcher">
+      <button class="sw active" data-option="1">
+        Option 1 — Flat list + filters
+        <small>simplest, one screen</small>
+      </button>
+      <button class="sw" data-option="2">
+        Option 2 — Ideas / Notes tabs
+        <small>two top-level workflows</small>
+      </button>
+      <button class="sw" data-option="3">
+        Option 3 — Projects (your idea)
+        <small>each project = its own world</small>
+      </button>
+      <button class="sw" data-option="4">
+        Option 4 — Projects + sub-tabs
+        <small>your idea, more structure</small>
+      </button>
+    </nav>
+
+    <div class="stage">
+      <div class="mockup">
+        <!-- ============ Option 1: Flat ============ -->
+        <div class="option active" data-option="1">
+          <div class="mock-toolbar">
+            <span class="chip active">All <span class="chip-count">14</span></span>
+            <span class="chip">💡 Ideas <span class="chip-count">5</span></span>
+            <span class="chip">📝 Notes <span class="chip-count">6</span></span>
+            <span class="chip">✓ Tasks <span class="chip-count">3</span></span>
+            <span class="chip">🔥 Today <span class="chip-count">2</span></span>
+          </div>
+
+          <div class="item">
+            <span class="check today"></span>
+            <span class="kind">Task</span>
+            <span class="text">Add SMTP via Resend so magic-link emails stop hitting the rate cap</span>
+            <span class="tag tag-sakni">Sakni</span>
+          </div>
+          <div class="item">
+            <span class="check todo"></span>
+            <span class="kind">Idea</span>
+            <span class="text">A "Yelp for study cafes" — students rate WiFi, outlets, vibe, quietness</span>
+            <span class="tag tag-biz">Business</span>
+          </div>
+          <div class="item">
+            <span class="check today"></span>
+            <span class="kind">Task</span>
+            <span class="text">Finish capstone proposal draft and email to Dr. Hassan</span>
+            <span class="tag tag-uni">Uni</span>
+          </div>
+          <div class="item">
+            <span class="check todo"></span>
+            <span class="kind">Note</span>
+            <span class="text">Resend free tier = 100 emails/day, no credit card needed. Check sender domain.</span>
+            <span class="tag tag-tech">Tech</span>
+          </div>
+          <div class="item">
+            <span class="check todo"></span>
+            <span class="kind">Idea</span>
+            <span class="text">Weekly meal-prep system — Sunday plan, batch-cook, auto-grocery list</span>
+            <span class="tag tag-life">Life</span>
+          </div>
+          <div class="item done">
+            <span class="check done"></span>
+            <span class="kind">Task</span>
+            <span class="text">Apply Supabase schema migration for ideas table</span>
+            <span class="tag tag-sakni">Sakni</span>
+          </div>
+
+          <p style="color:var(--text-dim);font-size:0.85rem;margin:18px 0 0;text-align:center">
+            …and 8 more rows mixed below
+          </p>
+        </div>
+
+        <!-- ============ Option 2: Two tabs ============ -->
+        <div class="option" data-option="2">
+          <div class="tabs">
+            <span class="tab">💡 Ideas</span>
+            <span class="tab active">📝 Notes</span>
+          </div>
+
+          <div class="banner">
+            Good morning. <strong>3 things in progress.</strong> 5 todos in Sakni, 2 in Uni.
+            <strong>Pick today's focus →</strong>
+          </div>
+
+          <div class="mock-toolbar">
+            <span class="chip active">All</span>
+            <span class="chip">Today</span>
+            <span class="chip">Uni</span>
+            <span class="chip">Sakni</span>
+            <span class="chip">Business</span>
+            <span class="chip">Learn</span>
+            <span class="chip">Life</span>
+          </div>
+
+          <div class="item">
+            <span class="check today"></span>
+            <span class="kind">Today</span>
+            <span class="text">Add SMTP via Resend so magic-link emails stop hitting the rate cap</span>
+            <span class="tag tag-sakni">Sakni</span>
+          </div>
+          <div class="item">
+            <span class="check today"></span>
+            <span class="kind">Today</span>
+            <span class="text">Finish capstone proposal draft and email to Dr. Hassan</span>
+            <span class="tag tag-uni">Uni</span>
+          </div>
+          <div class="item">
+            <span class="check todo"></span>
+            <span class="kind">Todo</span>
+            <span class="text">Resend free tier = 100 emails/day. Set up sender domain.</span>
+            <span class="tag tag-sakni">Sakni</span>
+          </div>
+          <div class="item">
+            <span class="check todo"></span>
+            <span class="kind">Todo</span>
+            <span class="text">Watch Andrej Karpathy's "Build GPT from scratch"</span>
+            <span class="tag tag-learn">Learn</span>
+          </div>
+          <div class="item done">
+            <span class="check done"></span>
+            <span class="kind">Done</span>
+            <span class="text">Apply Supabase schema migration</span>
+            <span class="tag tag-sakni">Sakni</span>
+          </div>
+
+          <p style="color:var(--text-dim);font-size:0.82rem;margin:14px 0 0">
+            ↑ Notes tab: daily productivity, 3-state status, life areas as categories.<br>
+            Switch to <strong>Ideas tab</strong> to capture business ideas with problem→solution structure (the original Solo workflow).
+          </p>
+        </div>
+
+        <!-- ============ Option 3: Projects (user's idea) ============ -->
+        <div class="option" data-option="3">
+          <div class="layout">
+            <aside class="sidebar">
+              <div class="sidebar-title">Projects</div>
+              <div class="proj"><span class="proj-dot" style="background:var(--c-sakni)"></span>Sakni<span class="proj-count">8</span></div>
+              <div class="proj active"><span class="proj-dot" style="background:var(--pop2)"></span>Solo<span class="proj-count">4</span></div>
+              <div class="proj"><span class="proj-dot" style="background:var(--c-life)"></span>Daily / Life<span class="proj-count">6</span></div>
+              <div class="proj"><span class="proj-dot" style="background:var(--c-uni)"></span>Uni<span class="proj-count">3</span></div>
+              <div class="proj"><span class="proj-dot" style="background:var(--c-biz)"></span>Coffee Shop App<span class="proj-count">2</span></div>
+              <div class="proj"><span class="proj-dot" style="background:var(--c-learn)"></span>Learning<span class="proj-count">5</span></div>
+              <div class="new-proj">+ New Project</div>
+            </aside>
+
+            <div>
+              <div class="panel-header">
+                <div>
+                  <h2 class="panel-title">Solo</h2>
+                  <p class="panel-sub">Idea-tracker app · 4 open</p>
+                </div>
+                <span class="streak">🔥 5 this week</span>
+              </div>
+
+              <div class="banner">
+                <strong>2 in progress today.</strong> Last solved 4 hours ago.
+              </div>
+
+              <div class="item">
+                <span class="check today"></span>
+                <span class="kind">Idea</span>
+                <span class="text">Add AI suggest-solutions for highest-priority problems</span>
+              </div>
+              <div class="item">
+                <span class="check today"></span>
+                <span class="kind">Task</span>
+                <span class="text">Implement Projects model — sidebar + per-project items</span>
+              </div>
+              <div class="item">
+                <span class="check todo"></span>
+                <span class="kind">Note</span>
+                <span class="text">Resend free tier = 100/day. Domain verify takes 5 min.</span>
+              </div>
+              <div class="item done">
+                <span class="check done"></span>
+                <span class="kind">Task</span>
+                <span class="text">Bumped text limit 200 → 2000 chars + textarea</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============ Option 4: Projects + sub-tabs ============ -->
+        <div class="option" data-option="4">
+          <div class="layout">
+            <aside class="sidebar">
+              <div class="sidebar-title">Projects</div>
+              <div class="proj active"><span class="proj-dot" style="background:var(--c-sakni)"></span>Sakni<span class="proj-count">8</span></div>
+              <div class="proj"><span class="proj-dot" style="background:var(--pop2)"></span>Solo<span class="proj-count">4</span></div>
+              <div class="proj"><span class="proj-dot" style="background:var(--c-life)"></span>Daily / Life<span class="proj-count">6</span></div>
+              <div class="proj"><span class="proj-dot" style="background:var(--c-uni)"></span>Uni<span class="proj-count">3</span></div>
+              <div class="proj"><span class="proj-dot" style="background:var(--c-biz)"></span>Coffee Shop App<span class="proj-count">2</span></div>
+              <div class="proj"><span class="proj-dot" style="background:var(--c-learn)"></span>Learning<span class="proj-count">5</span></div>
+              <div class="new-proj">+ New Project</div>
+            </aside>
+
+            <div>
+              <div class="panel-header">
+                <div>
+                  <h2 class="panel-title">Sakni</h2>
+                  <p class="panel-sub">Real-estate app · 8 open · 23 done</p>
+                </div>
+                <span class="streak">🔥 5 this week</span>
+              </div>
+
+              <div class="tabs">
+                <span class="tab active">📝 Notes</span>
+                <span class="tab">💡 Ideas</span>
+                <span class="tab">✓ Tasks</span>
+                <span class="tab">📚 Docs</span>
+              </div>
+
+              <div class="banner">
+                <strong>3 tasks in progress today.</strong> 1 idea waiting for a solution.
+              </div>
+
+              <div class="item">
+                <span class="check today"></span>
+                <span class="text">Add SMTP via Resend so magic-link emails stop hitting the rate cap. Verify sender domain first.</span>
+              </div>
+              <div class="item">
+                <span class="check todo"></span>
+                <span class="text">Resend free tier = 100 emails/day, no card needed. Domain verify takes ~5 min.</span>
+              </div>
+              <div class="item">
+                <span class="check todo"></span>
+                <span class="text">Auth callback fails on Safari iOS — investigate, possibly cookie SameSite issue</span>
+              </div>
+              <div class="item done">
+                <span class="check done"></span>
+                <span class="text">Apply Supabase schema migration</span>
+              </div>
+
+              <p style="color:var(--text-dim);font-size:0.82rem;margin:14px 0 0">
+                ↑ <strong>Sakni → Notes</strong> tab. Switch tabs to see this project's ideas, tasks, or docs.<br>
+                Switch projects in the left sidebar to jump to <strong>Solo</strong>, <strong>Daily/Life</strong>, etc.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ Pros / Cons / Pick ============ -->
+      <aside class="pros">
+        <!-- Option 1 -->
+        <div class="opt-info" data-option="1">
+          <h3>Option 1 — Flat list + filters</h3>
+          <p class="meta">One screen, type chips, category tags</p>
+          <h4>Best for</h4>
+          <ul><li>People who like <strong>everything in one place</strong> and use search/filter to slice it.</li></ul>
+          <h4>Strong</h4>
+          <ul>
+            <li>Simplest schema change — just add <code>kind</code> and <code>category</code> columns.</li>
+            <li>One mental model: it's all just rows.</li>
+          </ul>
+          <h4>Weak</h4>
+          <ul>
+            <li>Different workflows (idea capture vs daily todos) blend visually unless you actively filter.</li>
+            <li>Doesn't scale once you have 100+ items.</li>
+          </ul>
+        </div>
+        <!-- Option 2 -->
+        <div class="opt-info" data-option="2" style="display:none">
+          <h3>Option 2 — Ideas / Notes tabs</h3>
+          <p class="meta">Two top-level lists, separate workflows</p>
+          <h4>Best for</h4>
+          <ul><li>Treating "capture business ideas" and "manage daily work" as <strong>fundamentally different modes</strong>.</li></ul>
+          <h4>Strong</h4>
+          <ul>
+            <li>Clean separation of your two stated use cases.</li>
+            <li>Ideas tab keeps the original problem→solution structure intact.</li>
+            <li>Notes tab gets all the productivity features (status, daily review, streaks).</li>
+          </ul>
+          <h4>Weak</h4>
+          <ul>
+            <li>Categorization within each tab is flat (life areas as tags) — not as deep as projects.</li>
+            <li>If a project (e.g. Sakni) has BOTH ideas and notes, they live in different tabs.</li>
+          </ul>
+        </div>
+        <!-- Option 3 -->
+        <div class="opt-info" data-option="3" style="display:none">
+          <h3>Option 3 — Projects (your idea)</h3>
+          <p class="meta">Top-level projects · mixed item types inside</p>
+          <h4>Best for</h4>
+          <ul><li>How you actually <strong>think about your life</strong> — Sakni is a project, your business idea is a project, Daily/Life is a project.</li></ul>
+          <h4>Strong</h4>
+          <ul>
+            <li>Matches your mental model. Adding a new venture? New project.</li>
+            <li>Everything related to Sakni (notes, ideas, tasks, docs) lives <strong>together</strong>.</li>
+            <li>Scales — you can have 20 projects, each with its own context.</li>
+          </ul>
+          <h4>Weak</h4>
+          <ul>
+            <li>Slightly heavier UI (sidebar adds a column).</li>
+            <li>Need to commit to a project when capturing — but quick capture can default to your "Inbox" project.</li>
+          </ul>
+        </div>
+        <!-- Option 4 -->
+        <div class="opt-info" data-option="4" style="display:none">
+          <h3>Option 4 — Projects + sub-tabs ⭐</h3>
+          <p class="meta">Projects sidebar · type tabs within each</p>
+          <h4>Best for</h4>
+          <ul><li>The most powerful version — <strong>your projects idea</strong> + clean separation of notes / ideas / tasks <em>within</em> each project.</li></ul>
+          <h4>Strong</h4>
+          <ul>
+            <li>Inside Sakni you can flip between its notes (reference), ideas (problem→solution), and tasks (todos).</li>
+            <li>Daily review banner per project — focused.</li>
+            <li>Easiest to grow into AI features later (AI knows the project context).</li>
+          </ul>
+          <h4>Weak</h4>
+          <ul>
+            <li>The most complex schema (projects table + items with kind + status).</li>
+            <li>Two clicks to navigate (project → tab) instead of one — but you can pin a default.</li>
+          </ul>
+          <p style="font-size:0.85rem;color:var(--text-muted);margin-top:14px;line-height:1.5">
+            <strong>My recommendation.</strong> Combines the structural win of your projects idea with the workflow clarity of typed tabs. Most "future-proof" of the four.
+          </p>
+        </div>
+
+        <button class="pick-btn" id="pick">Pick Option 1</button>
+      </aside>
+    </div>
+
+    <div class="note">
+      <strong>How to choose:</strong> click each option above. They all use the same sample content (Sakni, Solo, Daily/Life, Coffee Shop App, Uni, Learning) so you can see how each architecture handles your real workflow. Once you pick, reply with the option number and I'll start the implementation milestones (M1: structure + status, M2: markdown, M3: daily review + streaks, M4: AI suggestions). Schema migration will be additive — no existing ideas lost.
+    </div>
+  </main>
+
+  <script>
+    const switches  = document.querySelectorAll('.sw');
+    const options   = document.querySelectorAll('.option');
+    const optInfos  = document.querySelectorAll('.opt-info');
+    const pickBtn   = document.getElementById('pick');
+
+    function showOption(n) {
+      switches.forEach(s => s.classList.toggle('active', s.dataset.option === n));
+      options.forEach(o => o.classList.toggle('active', o.dataset.option === n));
+      optInfos.forEach(o => o.style.display = o.dataset.option === n ? '' : 'none');
+      pickBtn.textContent = `Pick Option ${n}`;
+    }
+
+    switches.forEach(s => s.addEventListener('click', () => showOption(s.dataset.option)));
+    pickBtn.addEventListener('click', () => {
+      const active = document.querySelector('.sw.active');
+      const n = active.dataset.option;
+      const labelMap = {
+        '1': 'Option 1 — Flat list + filters',
+        '2': 'Option 2 — Ideas / Notes tabs',
+        '3': 'Option 3 — Projects (your idea)',
+        '4': 'Option 4 — Projects + sub-tabs',
+      };
+      alert(`You picked: ${labelMap[n]}\n\nReply in chat with "${labelMap[n]}" and I'll start building it.`);
+    });
+  </script>
+</body>
+</html>
