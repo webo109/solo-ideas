@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Solo — Docs Improvements</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;800&display=swap" rel="stylesheet" />
+  <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+  <meta name="theme-color" content="#0a0a0f" />
+  <style>
+    :root {
+      --bg-base: #0a0a0f;
+      --text-main: #f8f9fa;
+      --text-muted: #a0aabf;
+      --text-dim: #6b7387;
+      --glass-bg: rgba(255,255,255,0.04);
+      --glass-bg-2: rgba(255,255,255,0.06);
+      --glass-border: rgba(255,255,255,0.08);
+      --pop:  #7f00ff;
+      --pop2: #e100ff;
+      --pop3: #00d2ff;
+      --c-life: #5cd6c0;
+      --c-warn: #ff5d8f;
+      --c-yellow: #ffd23f;
+      --pop-grad: linear-gradient(135deg, var(--pop), var(--pop2));
+      --shadow-glow: 0 0 20px rgba(127,0,255,0.3);
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    body {
+      margin: 0; font-family: 'Outfit', system-ui, sans-serif;
+      background: var(--bg-base); color: var(--text-main);
+      min-height: 100vh; -webkit-font-smoothing: antialiased;
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background:
+        radial-gradient(circle at 20% 0%, rgba(127,0,255,0.15), transparent 50%),
+        radial-gradient(circle at 100% 100%, rgba(225,0,255,0.10), transparent 50%);
+      z-index: -1; pointer-events: none;
+    }
+
+    .page { max-width: 1280px; margin: 0 auto; padding: 6vh 24px 80px; }
+
+    .topbar {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 32px;
+    }
+    .back {
+      color: var(--text-muted); text-decoration: none; font-size: 0.92rem;
+      padding: 8px 14px; border-radius: 10px;
+      border: 1px solid var(--glass-border); background: var(--glass-bg);
+      transition: all 0.2s ease;
+    }
+    .back:hover { color: #fff; border-color: rgba(225,0,255,0.4); }
+
+    h1 {
+      font-size: clamp(2.2rem, 5vw, 3.4rem); font-weight: 800;
+      letter-spacing: -0.02em; margin: 0 0 12px;
+      background: linear-gradient(to right, #fff, #a0aabf);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    h1 span {
+      background: var(--pop-grad);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .lede {
+      color: var(--text-muted); font-size: 1.04rem; max-width: 760px;
+      line-height: 1.6; margin: 0 0 36px;
+    }
+
+    .switcher {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      background: var(--glass-bg); border: 1px solid var(--glass-border);
+      border-radius: 18px; padding: 8px; margin-bottom: 28px;
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    }
+    .sw {
+      flex: 1; min-width: 200px; padding: 14px 18px; border-radius: 12px;
+      background: transparent; border: 0; color: var(--text-muted);
+      font-family: inherit; font-size: 0.95rem; font-weight: 500;
+      cursor: pointer; transition: all 0.25s ease; text-align: left;
+    }
+    .sw:hover { color: #fff; background: rgba(255,255,255,0.04); }
+    .sw.active {
+      background: var(--pop-grad); color: #fff;
+      box-shadow: 0 4px 18px rgba(225,0,255,0.35);
+    }
+    .sw small { display: block; font-weight: 400; opacity: 0.75; margin-top: 2px; font-size: 0.78rem; }
+
+    .stage {
+      display: grid; grid-template-columns: minmax(0, 1fr) 320px;
+      gap: 24px; align-items: start;
+    }
+    @media (max-width: 980px) { .stage { grid-template-columns: 1fr; } }
+
+    .mockup {
+      background: var(--glass-bg); border: 1px solid var(--glass-border);
+      border-radius: 24px; padding: 28px;
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+      min-height: 620px;
+    }
+
+    .pros {
+      background: var(--glass-bg); border: 1px solid var(--glass-border);
+      border-radius: 24px; padding: 24px;
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      position: sticky; top: 24px;
+    }
+    .pros h3 { margin: 0 0 6px; font-size: 1.15rem; font-weight: 700; }
+    .pros .meta { color: var(--text-dim); font-size: 0.85rem; margin: 0 0 18px; }
+    .pros h4 { margin: 14px 0 6px; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); }
+    .pros ul { margin: 0; padding-left: 20px; }
+    .pros li { color: var(--text-muted); font-size: 0.92rem; line-height: 1.55; margin-bottom: 4px; }
+    .pros li strong { color: #fff; font-weight: 500; }
+    .pick-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 18px;
+    }
+    .pick-btn {
+      grid-column: 1 / -1;
+      padding: 12px 16px; border-radius: 12px;
+      background: var(--pop-grad); color: #fff;
+      font-family: inherit; font-weight: 600; font-size: 0.95rem;
+      border: 0; cursor: pointer; text-align: center;
+      box-shadow: 0 4px 18px rgba(225,0,255,0.35);
+      transition: transform 0.2s ease;
+    }
+    .pick-btn:hover { transform: translateY(-1px); }
+    .pick-btn--all {
+      background: linear-gradient(135deg, #5cd6c0, #00d2ff);
+      box-shadow: 0 4px 18px rgba(0,210,255,0.35);
+    }
+
+    .option { display: none; }
+    .option.active { display: block; }
+
+    /* ============ Mockup primitives ============ */
+
+    .panel-head {
+      display: flex; align-items: baseline; justify-content: space-between;
+      gap: 12px; flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .panel-head h2 { margin: 0; font-size: 1.4rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+    .panel-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--pop2); box-shadow: 0 0 12px var(--pop2); }
+    .panel-meta { color: var(--text-dim); font-size: 0.86rem; margin: 0; }
+
+    .tabs {
+      display: flex; gap: 4px;
+      padding: 6px; border-radius: 14px;
+      background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border);
+      margin-bottom: 18px; width: fit-content;
+    }
+    .tab {
+      padding: 8px 16px; border-radius: 10px; cursor: pointer;
+      font-size: 0.9rem; font-weight: 500; color: var(--text-muted);
+      transition: all 0.2s ease; user-select: none;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .tab.active { background: var(--pop-grad); color: #fff; }
+    .tab-count {
+      font-size: 0.74rem; padding: 1px 7px; border-radius: 10px;
+      background: rgba(255,255,255,0.12);
+    }
+
+    /* ===== Option 1 — title + body ===== */
+
+    .doc-row {
+      display: grid; grid-template-columns: 24px 26px minmax(0, 1fr) auto;
+      gap: 12px; align-items: start;
+      padding: 14px 16px;
+      background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border);
+      border-radius: 16px; margin-bottom: 10px;
+      transition: all 0.25s ease;
+    }
+    .doc-row:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.13); }
+    .doc-row__handle, .doc-row__check {
+      width: 24px; height: 24px; align-self: center;
+      color: var(--text-dim); display: grid; place-items: center; font-size: 0.95rem;
+    }
+    .doc-row__check {
+      width: 22px; height: 22px; border-radius: 50%;
+      border: 2px solid var(--text-dim); background: transparent;
+    }
+
+    /* old-style: single text blob */
+    .doc-row--old .doc-row__body {
+      font-size: 0.95rem; line-height: 1.5; color: var(--text-muted);
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    /* new-style: title + preview */
+    .doc-row__title {
+      font-size: 1.05rem; font-weight: 600; color: #fff; margin: 0 0 4px;
+      line-height: 1.35;
+    }
+    .doc-row__preview {
+      font-size: 0.88rem; color: var(--text-muted); line-height: 1.5;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden; margin: 0;
+    }
+    .doc-row__meta {
+      margin-top: 8px;
+      font-size: 0.72rem; color: var(--text-dim);
+      display: flex; gap: 12px; flex-wrap: wrap;
+    }
+    .doc-row__meta strong { color: var(--text-muted); font-weight: 500; }
+
+    .compare {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 18px;
+    }
+    @media (max-width: 760px) { .compare { grid-template-columns: 1fr; } }
+    .compare__col h3 {
+      font-size: 0.78rem; font-weight: 600; letter-spacing: 1.4px;
+      text-transform: uppercase; color: var(--text-dim); margin: 0 0 10px;
+    }
+    .compare__col--bad h3 { color: var(--c-warn); }
+    .compare__col--good h3 { color: var(--c-life); }
+
+    /* ===== Option 2 — Reader view ===== */
+
+    .reader-stage {
+      position: relative;
+      min-height: 560px;
+      border-radius: 18px;
+      overflow: hidden;
+      background: rgba(0,0,0,0.25);
+      border: 1px solid var(--glass-border);
+      padding: 16px;
+    }
+    .reader-stage__back {
+      filter: blur(4px) brightness(0.6);
+      pointer-events: none;
+      opacity: 0.6;
+    }
+    .reader-modal {
+      position: absolute; inset: 24px; z-index: 2;
+      background: rgba(15,15,22,0.96); border: 1px solid var(--glass-border);
+      border-radius: 18px; padding: 24px 28px;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.55);
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .reader__head {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 14px; padding-bottom: 14px;
+      border-bottom: 1px solid var(--glass-border); margin-bottom: 14px;
+    }
+    .reader__title { margin: 0 0 4px; font-size: 1.5rem; font-weight: 700; line-height: 1.2; }
+    .reader__sub {
+      margin: 0; font-size: 0.78rem; color: var(--text-dim);
+      display: flex; gap: 14px; flex-wrap: wrap;
+    }
+    .reader__actions { display: flex; gap: 8px; }
+    .btn-sm {
+      padding: 7px 13px; border-radius: 9px; font-size: 0.85rem; font-weight: 500;
+      background: var(--glass-bg); border: 1px solid var(--glass-border);
+      color: var(--text-muted); cursor: pointer; transition: all 0.2s ease;
+    }
+    .btn-sm:hover { color: #fff; border-color: rgba(225,0,255,0.4); }
+    .btn-sm--primary {
+      background: var(--pop-grad); color: #fff; border-color: transparent;
+      box-shadow: 0 4px 14px rgba(225,0,255,0.3);
+    }
+    .reader__body {
+      flex: 1; overflow: auto;
+      font-size: 0.98rem; line-height: 1.7; color: var(--text-main);
+    }
+    .reader__body h1 { font-size: 1.4rem; margin: 1.2em 0 0.4em; font-weight: 700; }
+    .reader__body h2 { font-size: 1.2rem; margin: 1em 0 0.4em; font-weight: 700; }
+    .reader__body h3 { font-size: 1.05rem; margin: 0.9em 0 0.4em; font-weight: 700; }
+    .reader__body p  { margin: 0.6em 0; }
+    .reader__body ul, .reader__body ol { padding-left: 1.6em; margin: 0.6em 0; }
+    .reader__body li { margin: 0.25em 0; }
+    .reader__body code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.86em; padding: 1px 6px; border-radius: 4px;
+      background: rgba(255,255,255,0.07);
+    }
+    .reader__body pre {
+      background: rgba(255,255,255,0.05); padding: 12px 14px; border-radius: 10px;
+      overflow-x: auto; font-size: 0.86em; margin: 0.7em 0;
+    }
+    .reader__body blockquote {
+      border-left: 3px solid var(--pop2); padding-left: 14px; margin: 0.7em 0;
+      color: var(--text-muted);
+    }
+    .reader__body a { color: var(--pop3); text-decoration: underline; }
+
+    /* ===== Option 3 — Pin instead of status ===== */
+
+    .doc-row--pinned {
+      border-color: rgba(255,210,63,0.35);
+      background: linear-gradient(135deg, rgba(255,210,63,0.08), rgba(255,255,255,0.02));
+    }
+    .pin-icon {
+      width: 22px; height: 22px; border-radius: 6px;
+      display: grid; place-items: center; font-size: 0.95rem;
+      color: var(--text-dim);
+      transition: all 0.2s ease;
+    }
+    .pin-icon--active { color: var(--c-yellow); }
+    .pin-icon:hover { color: #fff; }
+
+    .section-label {
+      font-size: 0.74rem; font-weight: 600; letter-spacing: 1.4px;
+      text-transform: uppercase; color: var(--text-dim);
+      margin: 16px 0 8px;
+    }
+    .section-label--first { margin-top: 0; }
+
+    /* ===== Combo preview helper ===== */
+    .combo-flow {
+      background: linear-gradient(135deg, rgba(127,0,255,0.1), rgba(225,0,255,0.05));
+      border: 1px solid rgba(225,0,255,0.25);
+      border-radius: 14px;
+      padding: 16px 18px;
+      margin-bottom: 18px;
+      font-size: 0.9rem; line-height: 1.6;
+      color: var(--text-muted);
+    }
+    .combo-flow strong { color: #fff; font-weight: 500; }
+
+    .note {
+      margin-top: 36px; padding: 18px;
+      border: 1px dashed var(--glass-border); border-radius: 12px;
+      color: var(--text-muted); font-size: 0.9rem; line-height: 1.6;
+    }
+    .note code {
+      background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px;
+      font-size: 0.86em;
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="topbar">
+      <a class="back" href="/">← Back to Solo</a>
+      <a class="back" href="/demo.html">Architecture demo →</a>
+    </div>
+
+    <h1>Make <span>Docs</span> Pull Their Weight</h1>
+    <p class="lede">
+      Right now Docs is just a row in a list — same shape as a Note or Task. That's wasted potential. These three improvements turn it into something you'd actually open and read. Click each below to see how it looks against the same sample content (a Sakni auth doc, a Resend setup note, a Coffee Shop competitive analysis). Pick any combination — they're independent.
+    </p>
+
+    <nav class="switcher">
+      <button class="sw active" data-option="1">
+        Option 1 — Title + body
+        <small>auto-derive from first markdown line</small>
+      </button>
+      <button class="sw" data-option="2">
+        Option 2 — Reader view
+        <small>full-screen modal with markdown</small>
+      </button>
+      <button class="sw" data-option="3">
+        Option 3 — Pin, not status
+        <small>docs aren't todos</small>
+      </button>
+      <button class="sw" data-option="all">
+        All three combined ⭐
+        <small>recommended bundle</small>
+      </button>
+    </nav>
+
+    <div class="stage">
+      <div class="mockup">
+
+        <!-- ===================== Option 1 ===================== -->
+        <div class="option active" data-option="1">
+          <div class="panel-head">
+            <div>
+              <h2><span class="panel-dot"></span>Sakni</h2>
+              <p class="panel-meta">Real-estate app · 4 docs</p>
+            </div>
+          </div>
+          <div class="tabs">
+            <span class="tab">📝 Notes</span>
+            <span class="tab">💡 Ideas</span>
+            <span class="tab">✓ Tasks</span>
+            <span class="tab active">📚 Docs <span class="tab-count">4</span></span>
+          </div>
+
+          <div class="compare">
+            <div class="compare__col compare__col--bad">
+              <h3>✗ Today</h3>
+              <div class="doc-row doc-row--old">
+                <div class="doc-row__handle">⋮⋮</div>
+                <div class="doc-row__check"></div>
+                <div class="doc-row__body">How Sakni auth works The flow starts when the user visits the site and Supabase Auth checks for an existing session in localStorage. If absent, we render the magic-link form. After submit, Supabase calls signInWithOtp with…</div>
+                <div>×</div>
+              </div>
+              <div class="doc-row doc-row--old">
+                <div class="doc-row__handle">⋮⋮</div>
+                <div class="doc-row__check"></div>
+                <div class="doc-row__body">Resend SMTP setup notes Path A — use onboarding@resend.dev as sender, no DNS needed, single-user only. Path B — verify own domain, takes ~5 min. SMTP host smtp.resend.com port 465…</div>
+                <div>×</div>
+              </div>
+              <p style="color:var(--text-dim);font-size:0.82rem;margin:8px 0 0">Just blobs of text — hard to scan, no clear identity.</p>
+            </div>
+
+            <div class="compare__col compare__col--good">
+              <h3>✓ With title + body</h3>
+              <div class="doc-row">
+                <div class="doc-row__handle">⋮⋮</div>
+                <div class="doc-row__check"></div>
+                <div>
+                  <h4 class="doc-row__title">How Sakni auth works</h4>
+                  <p class="doc-row__preview">The flow starts when the user visits the site and Supabase Auth checks for an existing session in localStorage. If absent, we render the magic-link form…</p>
+                  <div class="doc-row__meta">
+                    <span><strong>edited</strong> 2h ago</span>
+                    <span><strong>340</strong> words</span>
+                  </div>
+                </div>
+                <div>×</div>
+              </div>
+              <div class="doc-row">
+                <div class="doc-row__handle">⋮⋮</div>
+                <div class="doc-row__check"></div>
+                <div>
+                  <h4 class="doc-row__title">Resend SMTP setup notes</h4>
+                  <p class="doc-row__preview">Path A — use onboarding@resend.dev, no DNS. Path B — verify own domain, ~5 min. SMTP host smtp.resend.com, port 465, username "resend"…</p>
+                  <div class="doc-row__meta">
+                    <span><strong>edited</strong> yesterday</span>
+                    <span><strong>180</strong> words</span>
+                  </div>
+                </div>
+                <div>×</div>
+              </div>
+              <p style="color:var(--text-dim);font-size:0.82rem;margin:8px 0 0">Title prominent, preview hints at content, meta shows freshness.</p>
+            </div>
+          </div>
+
+          <div class="combo-flow" style="margin-top:18px">
+            <strong>How it works:</strong> The first line of your markdown becomes the title automatically. So if you write <code style="background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px"># How Sakni auth works</code> on line 1 and the body below, the list shows just the title + a 2-line preview. No new field, no new schema column — just smarter parsing on the client side.
+          </div>
+        </div>
+
+        <!-- ===================== Option 2 ===================== -->
+        <div class="option" data-option="2">
+          <div class="panel-head">
+            <div>
+              <h2><span class="panel-dot"></span>Sakni</h2>
+              <p class="panel-meta">Click any doc → opens reader view (shown right)</p>
+            </div>
+          </div>
+
+          <div class="reader-stage">
+            <div class="reader-stage__back">
+              <div class="tabs"><span class="tab active">📚 Docs</span></div>
+              <div class="doc-row"><div class="doc-row__handle">⋮⋮</div><div class="doc-row__check"></div><div><h4 class="doc-row__title">How Sakni auth works</h4></div><div>×</div></div>
+              <div class="doc-row"><div class="doc-row__handle">⋮⋮</div><div class="doc-row__check"></div><div><h4 class="doc-row__title">Resend SMTP setup notes</h4></div><div>×</div></div>
+              <div class="doc-row"><div class="doc-row__handle">⋮⋮</div><div class="doc-row__check"></div><div><h4 class="doc-row__title">Competitive analysis — coffee shop apps</h4></div><div>×</div></div>
+            </div>
+
+            <div class="reader-modal">
+              <div class="reader__head">
+                <div>
+                  <h3 class="reader__title">How Sakni auth works</h3>
+                  <p class="reader__sub">
+                    <span>edited 2h ago</span><span>340 words</span><span>~2 min read</span>
+                  </p>
+                </div>
+                <div class="reader__actions">
+                  <button class="btn-sm">Edit</button>
+                  <button class="btn-sm">Archive</button>
+                  <button class="btn-sm">×</button>
+                </div>
+              </div>
+              <div class="reader__body">
+                <p>The flow starts when the user visits the deployed site. Supabase Auth checks for an existing session token in <code>localStorage</code>.</p>
+                <h2>Sign-in path</h2>
+                <ol>
+                  <li>If no session: render the magic-link form on the auth screen.</li>
+                  <li>User types email, clicks <em>Send link</em>.</li>
+                  <li>We call <code>supabase.auth.signInWithOtp({ email, options: { emailRedirectTo } })</code>.</li>
+                  <li>Email arrives via Resend SMTP (config in Supabase).</li>
+                  <li>User clicks the link → returns to <code>solo-ideas.vercel.app/?code=...</code>.</li>
+                </ol>
+                <h2>Token exchange</h2>
+                <p>The Supabase JS client auto-detects the <code>?code</code> param via <code>detectSessionInUrl: true</code> and exchanges it for an access + refresh token pair. Both are stored in localStorage.</p>
+                <blockquote>Refresh tokens rotate. Access tokens last ~1 hour. The SDK refreshes silently in the background.</blockquote>
+                <h2>RLS</h2>
+                <p>All queries are filtered by <code>auth.uid() = user_id</code> via Row Level Security policies. The anon key in <code>config.js</code> is public-safe — RLS is what actually protects the data.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="combo-flow" style="margin-top:18px">
+            <strong>What you get:</strong> Click a doc → opens this big reader pane. Markdown rendered properly (headings, code blocks, lists, blockquotes). <strong>Edit</strong> swaps to a textarea, <strong>Archive</strong> moves it, <strong>×</strong> closes. Word count, read time, and "edited Xh ago" up top.
+          </div>
+        </div>
+
+        <!-- ===================== Option 3 ===================== -->
+        <div class="option" data-option="3">
+          <div class="panel-head">
+            <div>
+              <h2><span class="panel-dot"></span>Sakni</h2>
+              <p class="panel-meta">Pinned + recent — no checkbox cycle</p>
+            </div>
+          </div>
+          <div class="tabs">
+            <span class="tab">📝 Notes</span>
+            <span class="tab">💡 Ideas</span>
+            <span class="tab">✓ Tasks</span>
+            <span class="tab active">📚 Docs <span class="tab-count">5</span></span>
+          </div>
+
+          <div class="section-label section-label--first">📌 Pinned</div>
+          <div class="doc-row doc-row--pinned">
+            <div class="doc-row__handle">⋮⋮</div>
+            <div class="pin-icon pin-icon--active">📌</div>
+            <div>
+              <h4 class="doc-row__title">How Sakni auth works</h4>
+              <p class="doc-row__preview">Magic-link via Supabase + Resend SMTP. Token exchange in URL. RLS protects data.</p>
+            </div>
+            <div>×</div>
+          </div>
+          <div class="doc-row doc-row--pinned">
+            <div class="doc-row__handle">⋮⋮</div>
+            <div class="pin-icon pin-icon--active">📌</div>
+            <div>
+              <h4 class="doc-row__title">Resend SMTP setup notes</h4>
+              <p class="doc-row__preview">Path A vs B, host/port/username, where to paste API key in Supabase.</p>
+            </div>
+            <div>×</div>
+          </div>
+
+          <div class="section-label">All docs</div>
+          <div class="doc-row">
+            <div class="doc-row__handle">⋮⋮</div>
+            <div class="pin-icon">📌</div>
+            <div>
+              <h4 class="doc-row__title">Competitive analysis — coffee shop apps</h4>
+              <p class="doc-row__preview">Yelp, Google Maps, Resy — strengths, gaps, what a study-cafe-focused app could win on.</p>
+            </div>
+            <div>×</div>
+          </div>
+          <div class="doc-row">
+            <div class="doc-row__handle">⋮⋮</div>
+            <div class="pin-icon">📌</div>
+            <div>
+              <h4 class="doc-row__title">Sakni schema decisions log</h4>
+              <p class="doc-row__preview">Why we chose UUIDs over bigint, why position is float, why RLS instead of policies-in-code.</p>
+            </div>
+            <div>×</div>
+          </div>
+
+          <div class="combo-flow" style="margin-top:18px">
+            <strong>The change:</strong> Notes/Ideas/Tasks still cycle <em>open → today → archived</em>. But Docs swap that circle for a 📌 pin (yellow when pinned, gray when not). Pinned docs sort to the top in their own section. Archive is still available — moved to the row's hover menu instead of the click target.
+          </div>
+        </div>
+
+        <!-- ===================== All combined ===================== -->
+        <div class="option" data-option="all">
+          <div class="panel-head">
+            <div>
+              <h2><span class="panel-dot"></span>Sakni</h2>
+              <p class="panel-meta">Title + body · pinned · click to open reader</p>
+            </div>
+          </div>
+          <div class="tabs">
+            <span class="tab">📝 Notes</span>
+            <span class="tab">💡 Ideas</span>
+            <span class="tab">✓ Tasks</span>
+            <span class="tab active">📚 Docs <span class="tab-count">4</span></span>
+          </div>
+
+          <div class="section-label section-label--first">📌 Pinned</div>
+          <div class="doc-row doc-row--pinned">
+            <div class="doc-row__handle">⋮⋮</div>
+            <div class="pin-icon pin-icon--active">📌</div>
+            <div>
+              <h4 class="doc-row__title">How Sakni auth works</h4>
+              <p class="doc-row__preview">The flow starts when the user visits the deployed site. Supabase Auth checks for an existing session token in localStorage. If absent…</p>
+              <div class="doc-row__meta">
+                <span><strong>edited</strong> 2h ago</span>
+                <span><strong>340</strong> words</span>
+                <span><strong>~2</strong> min read</span>
+              </div>
+            </div>
+            <div>×</div>
+          </div>
+          <div class="doc-row doc-row--pinned">
+            <div class="doc-row__handle">⋮⋮</div>
+            <div class="pin-icon pin-icon--active">📌</div>
+            <div>
+              <h4 class="doc-row__title">Resend SMTP setup notes</h4>
+              <p class="doc-row__preview">Path A — use onboarding@resend.dev, no DNS. Path B — verify own domain, ~5 min. SMTP host smtp.resend.com, port 465…</p>
+              <div class="doc-row__meta">
+                <span><strong>edited</strong> yesterday</span>
+                <span><strong>180</strong> words</span>
+              </div>
+            </div>
+            <div>×</div>
+          </div>
+
+          <div class="section-label">All docs</div>
+          <div class="doc-row">
+            <div class="doc-row__handle">⋮⋮</div>
+            <div class="pin-icon">📌</div>
+            <div>
+              <h4 class="doc-row__title">Competitive analysis — coffee shop apps</h4>
+              <p class="doc-row__preview">Yelp, Google Maps, Resy — strengths, gaps, what a study-cafe-focused app could win on (WiFi quality, outlet density, quietness scores)…</p>
+              <div class="doc-row__meta">
+                <span><strong>edited</strong> 5d ago</span>
+                <span><strong>820</strong> words</span>
+                <span><strong>~4</strong> min read</span>
+              </div>
+            </div>
+            <div>×</div>
+          </div>
+          <div class="doc-row">
+            <div class="doc-row__handle">⋮⋮</div>
+            <div class="pin-icon">📌</div>
+            <div>
+              <h4 class="doc-row__title">Sakni schema decisions log</h4>
+              <p class="doc-row__preview">Why we chose UUIDs over bigint, why position is float, why RLS instead of policies-in-code, why text limit is 5000 chars now…</p>
+              <div class="doc-row__meta">
+                <span><strong>edited</strong> 2 weeks ago</span>
+                <span><strong>620</strong> words</span>
+              </div>
+            </div>
+            <div>×</div>
+          </div>
+
+          <div class="combo-flow" style="margin-top:18px">
+            <strong>The full picture:</strong> Title + body separation gives the list its scannable shape. Pin replaces the irrelevant status circle. Click any row → reader view opens with full markdown rendering, edit toggle, and meta (edited / words / read time). All three pieces compound — none of them does much alone, but together they make Docs feel like a real notes app.
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ===================== Pros/Cons aside ===================== -->
+      <aside class="pros">
+        <div class="opt-info" data-option="1">
+          <h3>Option 1 — Title + body</h3>
+          <p class="meta">First markdown line = title</p>
+          <h4>Effort</h4>
+          <ul><li>Small. Pure client-side parsing — no schema change.</li></ul>
+          <h4>Strong</h4>
+          <ul>
+            <li><strong>Scannable list.</strong> Title pops, preview hints at content.</li>
+            <li>No new field to fill in — write naturally.</li>
+            <li>Auto-meta (word count, last edited) for free.</li>
+          </ul>
+          <h4>Weak</h4>
+          <ul>
+            <li>If you forget to start with <code>#</code>, the first line becomes the title regardless. (Fine — that's how the brain works anyway.)</li>
+          </ul>
+        </div>
+
+        <div class="opt-info" data-option="2" style="display:none">
+          <h3>Option 2 — Reader view</h3>
+          <p class="meta">Click row → full-screen modal</p>
+          <h4>Effort</h4>
+          <ul><li>Medium. New modal component + edit toggle + word-count helper.</li></ul>
+          <h4>Strong</h4>
+          <ul>
+            <li>Long docs are <strong>actually readable</strong> — proper line height, headings, code blocks.</li>
+            <li>Clear edit ↔ read distinction.</li>
+            <li>Meta strip (edited, words, read time) signals freshness + scope.</li>
+          </ul>
+          <h4>Weak</h4>
+          <ul>
+            <li>One extra click to read (vs inline).</li>
+            <li>Bigger UI surface to maintain.</li>
+          </ul>
+        </div>
+
+        <div class="opt-info" data-option="3" style="display:none">
+          <h3>Option 3 — Pin instead of status</h3>
+          <p class="meta">Docs aren't todos</p>
+          <h4>Effort</h4>
+          <ul><li>Small. Add <code>pinned</code> boolean to items, swap UI for kind=doc.</li></ul>
+          <h4>Strong</h4>
+          <ul>
+            <li>Matches how docs actually behave — they're <strong>reference</strong>, not work.</li>
+            <li>Most-used docs surface to the top automatically.</li>
+            <li>Status cycle stays for Notes/Ideas/Tasks where it makes sense.</li>
+          </ul>
+          <h4>Weak</h4>
+          <ul>
+            <li>Schema change (small, additive — same migration pattern as before).</li>
+            <li>Slightly different mental model per tab — but that's the point.</li>
+          </ul>
+        </div>
+
+        <div class="opt-info" data-option="all" style="display:none">
+          <h3>All three combined ⭐</h3>
+          <p class="meta">Strongly recommended</p>
+          <h4>Why bundle</h4>
+          <ul>
+            <li>Each one alone is <em>okay</em>. Together they transform Docs.</li>
+            <li>Title-only list (#1) is what makes the reader view (#2) worth opening.</li>
+            <li>Pin (#3) replaces a status that's meaningless for reference material.</li>
+          </ul>
+          <h4>Effort</h4>
+          <ul><li>One milestone — call it M3.5. Single migration + one focused PR.</li></ul>
+          <h4>Out of scope here (next round)</h4>
+          <ul>
+            <li>Code-block syntax highlighting.</li>
+            <li><code>[[Sakni]]</code> wiki-style cross-project links.</li>
+            <li>Card grid view (vs row list) for Docs.</li>
+          </ul>
+        </div>
+
+        <div class="pick-grid">
+          <button class="pick-btn" id="pick">Pick "All three combined"</button>
+        </div>
+      </aside>
+    </div>
+
+    <div class="note">
+      <strong>How to use:</strong> click each option above. Reply with the option number — <code>1</code>, <code>2</code>, <code>3</code>, or <code>all</code> — and I'll ship M3.5. AI suggestions (M4) is still deferred until you're ready to chat through the cadence/UX.
+    </div>
+  </main>
+
+  <script>
+    const switches = document.querySelectorAll('.sw');
+    const options  = document.querySelectorAll('.option');
+    const infos    = document.querySelectorAll('.opt-info');
+    const pickBtn  = document.getElementById('pick');
+    const labels = {
+      '1':   'Pick Option 1 — Title + body',
+      '2':   'Pick Option 2 — Reader view',
+      '3':   'Pick Option 3 — Pin, not status',
+      'all': 'Pick "All three combined" ⭐',
+    };
+    function show(n) {
+      switches.forEach(s => s.classList.toggle('active', s.dataset.option === n));
+      options.forEach(o => o.classList.toggle('active', o.dataset.option === n));
+      infos.forEach(i => i.style.display = i.dataset.option === n ? '' : 'none');
+      pickBtn.textContent = labels[n];
+    }
+    switches.forEach(s => s.addEventListener('click', () => show(s.dataset.option)));
+    pickBtn.addEventListener('click', () => {
+      const active = document.querySelector('.sw.active');
+      const n = active.dataset.option;
+      alert(`You picked: ${labels[n]}\n\nReply in chat with "${n === 'all' ? 'all three' : 'option ' + n}" and I'll ship it.`);
+    });
+  </script>
+</body>
+</html>
