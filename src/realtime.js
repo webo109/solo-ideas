@@ -1,27 +1,35 @@
 import { supabase } from './supabase.js';
 
-export function subscribeToIdeas(userId, handlers) {
+export function subscribeToProjects(userId, handlers) {
   const filter = `user_id=eq.${userId}`;
   const channel = supabase
-    .channel(`ideas:${userId}`)
-    .on(
-      'postgres_changes',
-      { event: 'INSERT', schema: 'public', table: 'ideas', filter },
-      (payload) => handlers.onInsert?.(payload.new),
-    )
-    .on(
-      'postgres_changes',
-      { event: 'UPDATE', schema: 'public', table: 'ideas', filter },
-      (payload) => handlers.onUpdate?.(payload.new),
-    )
-    .on(
-      'postgres_changes',
-      { event: 'DELETE', schema: 'public', table: 'ideas', filter },
-      (payload) => handlers.onDelete?.(payload.old),
-    )
+    .channel(`projects:${userId}`)
+    .on('postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'projects', filter },
+      (p) => handlers.onInsert?.(p.new))
+    .on('postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'projects', filter },
+      (p) => handlers.onUpdate?.(p.new))
+    .on('postgres_changes',
+      { event: 'DELETE', schema: 'public', table: 'projects', filter },
+      (p) => handlers.onDelete?.(p.old))
     .subscribe();
+  return () => supabase.removeChannel(channel);
+}
 
-  return () => {
-    supabase.removeChannel(channel);
-  };
+export function subscribeToItems(userId, handlers) {
+  const filter = `user_id=eq.${userId}`;
+  const channel = supabase
+    .channel(`items:${userId}`)
+    .on('postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'items', filter },
+      (p) => handlers.onInsert?.(p.new))
+    .on('postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'items', filter },
+      (p) => handlers.onUpdate?.(p.new))
+    .on('postgres_changes',
+      { event: 'DELETE', schema: 'public', table: 'items', filter },
+      (p) => handlers.onDelete?.(p.old))
+    .subscribe();
+  return () => supabase.removeChannel(channel);
 }

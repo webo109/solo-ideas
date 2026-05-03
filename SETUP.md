@@ -1,81 +1,103 @@
-# Solo — Setup (5 minutes)
+# Solo — Setup
 
-The code, schema, and deploy config are done. Three short steps to take it live.
+The code, schema, and deploy config are all done. This doc covers:
 
----
-
-## 1) Run the database schema (1 min)
-
-In your Supabase project:
-
-1. Left sidebar → **SQL Editor** → **+ New query**
-2. Open `supabase/schema.sql` from this repo, copy everything, paste into the editor
-3. Click **Run** (bottom right)
-
-You should see "Success. No rows returned." That created the `ideas` table, the Row Level Security policies, the `updated_at` trigger, and added the table to the realtime publication.
+- **First-time setup** (do once)
+- **Each new schema migration** (run when I push one)
+- **Optional: SMTP via Resend** to remove the magic-link email rate limit
 
 ---
 
-## 2) Wire your Supabase keys (30 sec)
+## First-time setup (already done if you're reading this)
 
-In your Supabase project: **Project Settings → API** — copy these two values:
+1. **Supabase project** created at https://supabase.com → URL + anon key wired into `src/config.js`
+2. **GitHub repo** at https://github.com/webo109/solo-ideas
+3. **Vercel project** auto-deploying `main` to https://solo-ideas.vercel.app
+4. **Vercel Deployment Protection** disabled (so the public URL is reachable)
+5. **Supabase Auth → URL Configuration** → Site URL set to `https://solo-ideas.vercel.app`
 
-- **Project URL** (e.g. `https://abcdefgh.supabase.co`)
-- **Project API keys → `anon` `public`** (a long `eyJ...` JWT)
-
-Open `src/config.js` and replace:
-
-```js
-export const SUPABASE_URL = 'YOUR_SUPABASE_URL';
-export const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
-```
-
-with your real values, then commit + push:
-
-```bash
-git add src/config.js
-git commit -m "Wire Supabase config"
-git push
-```
-
-> Note: the `anon` key is **safe to commit**. It's designed to ship in the browser — Row Level Security is what protects your data. Never commit the `service_role` key.
+If you ever need to set up a fresh project from this code, follow the original schema in `supabase/schema.sql` and the steps above.
 
 ---
 
-## 3) Configure Supabase Auth redirect URL (30 sec)
+## Run migrations when I push them
 
-So magic links return to your deployed site:
+Each time I add a `.sql` file under `supabase/migrations/`, paste it into the Supabase SQL Editor and run it.
 
-1. Supabase → **Authentication → URL Configuration**
-2. **Site URL**: paste your Vercel deploy URL (e.g. `https://solo-ideas.vercel.app`)
-3. **Redirect URLs**: add the same URL plus any preview/local URLs you'll use, one per line:
-   ```
-   https://solo-ideas.vercel.app
-   http://localhost:8765
-   ```
-4. **Save**
+1. https://supabase.com/dashboard/project/dkdrhfwlknctmhnuaeop/sql/new
+2. **Clear** any existing SQL in the editor (Ctrl+A → Delete)
+3. Open the migration file from GitHub (e.g. https://raw.githubusercontent.com/webo109/solo-ideas/main/supabase/migrations/0003_projects_and_items.sql), copy everything
+4. Paste into the SQL Editor → click **Run**
+5. Expect: "Success. No rows returned."
 
----
+All migrations are idempotent — safe to run multiple times.
 
-## 4) (Recommended) Lock signups to your email only (1 min)
+### Pending migrations
 
-Without this, anyone who knows the URL could sign up too. After **you** sign in once:
+| File | Status | Description |
+|---|---|---|
+| `0002_increase_text_limit.sql` | Run when ready | Bump idea text from 200 → 2000 chars |
+| `0003_projects_and_items.sql` | **Run before using new UI** | Adds projects + items tables, archive system, copies existing ideas into "Inbox" project |
 
-- Supabase → **Authentication → Sign In / Up Providers → Email**
-- Toggle **Allow new users to sign up** → **OFF**
-- Save
-
-Now only existing users (you) can request magic links.
+> Important: `0003` is **additive** — your `public.ideas` table is left intact. The migration only *copies* data into the new structure.
 
 ---
 
-## 5) Sign in (1 min)
+## (Recommended) Set up SMTP via Resend — removes the email rate limit
 
-1. Open your deployed Vercel URL
-2. Type your email → **Send link**
-3. Open your email, click the link → returns to the app, signed in
+The default Supabase email service caps you at ~2 magic-link emails/hour. Setting up Resend gives you 100 emails/day for free, no card required.
 
-Add an idea on your phone, watch it appear on your desktop in real time.
+### Step 1 — Create a Resend account (2 min)
+
+1. Go to https://resend.com → **Sign up** (use GitHub login for speed)
+2. Verify your email when prompted
+
+### Step 2 — Get an API key (30 sec)
+
+1. https://resend.com/api-keys → **Create API Key**
+2. Name it `Solo` · Permission: **Sending access** · Domain: **All domains**
+3. Click **Add** → **copy the key** (starts with `re_…`). You'll see it only once.
+4. **Don't paste it in chat.** Keep it in a notes app for the next step.
+
+### Step 3 — Pick a sender (choose one path)
+
+**Path A — Use Resend's default `onboarding@resend.dev` (fastest, fine for personal use)**
+- No DNS setup needed
+- Limit: only sends to your own verified email (the one you signed up with)
+- Perfect for a single-user app — that's exactly your case
+
+**Path B — Verify your own domain (5 min, looks more professional)**
+- Resend → **Domains** → **Add Domain** → enter your domain
+- Add the DNS records they show (TXT, MX, DKIM) at your registrar
+- Wait for verification (usually < 5 min)
+- Use `noreply@yourdomain.com` as the sender
+
+For a single-user productivity app, **Path A is plenty**.
+
+### Step 4 — Plug into Supabase (1 min)
+
+1. https://supabase.com/dashboard/project/dkdrhfwlknctmhnuaeop/settings/auth
+2. Scroll to **SMTP Settings** (or **Custom SMTP**)
+3. Toggle **Enable Custom SMTP** → ON
+4. Fill in:
+   - **Sender email**: `onboarding@resend.dev` (Path A) or your verified address (Path B)
+   - **Sender name**: `Solo`
+   - **Host**: `smtp.resend.com`
+   - **Port**: `465`
+   - **Username**: `resend`
+   - **Password**: paste the API key from Step 2 (starts with `re_…`)
+   - **Minimum interval between emails**: `0` (or whatever Supabase shows)
+5. Click **Save**
+
+### Step 5 — Test
+
+1. Sign out of the app
+2. Sign in with your email
+3. Magic link should arrive within seconds, no rate-limit error
+
+If it doesn't work:
+- Path A: confirm the email you used to sign up for Resend is the *same* email you're trying to magic-link
+- Check Supabase Auth logs: dashboard → **Logs** → **Auth Logs**
 
 ---
 
@@ -85,18 +107,18 @@ Add an idea on your phone, watch it appear on your desktop in real time.
 python3 -m http.server 8765
 ```
 
-Then `http://localhost:8765/`. The app uses ES modules, so opening `index.html` directly via `file://` won't work — needs the local server.
+Then `http://localhost:8765/`. ES modules require a server (won't work via `file://`).
 
-For local development you must also add `http://localhost:8765` to **Redirect URLs** in Supabase Auth (see step 3).
-
----
-
-## Migrating existing localStorage data
-
-If you used Solo before adding the backend, the first time you sign in on a device it will automatically import any ideas stored in `localStorage` (under the keys `eureka.v1` or `tada.v1`). Migration runs once per device and only if the cloud is empty.
+For magic-link sign-in to redirect back to localhost, ensure `http://localhost:8765/**` is in your **Auth → URL Configuration → Redirect URLs**.
 
 ---
 
-## Sanity check
+## After Solo's first sign-in: lock down signups
 
-Open the deployed app, sign in, add an idea. Then in Supabase → **Table Editor → ideas** you should see your row. If you do, everything's wired up.
+Once you've signed in once and your user exists in Supabase:
+
+1. **Authentication → Sign In / Up Providers → Email**
+2. Toggle **Allow new users to sign up** → **OFF**
+3. Save
+
+This means only you (existing user) can ever request magic links. New emails get rejected.
