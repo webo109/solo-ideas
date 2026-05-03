@@ -120,13 +120,15 @@ input, textarea {
   padding: 16px 0; font-size: 1.1rem; font-weight: 400;
   font-family: inherit; color: var(--text-main); line-height: 1.5;
   resize: none; overflow: hidden;
-  min-height: 26px; max-height: 240px;
+  min-height: 58px; max-height: 240px;
+  white-space: pre-wrap; word-wrap: break-word;
 }
 .composer__input::placeholder {
   color: var(--text-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .composer { align-items: flex-end; }
-.composer__btn { margin-bottom: 4px; }
+.composer__btn { margin-bottom: 4px; flex-shrink: 0; }
 .composer__btn {
   width: 50px; height: 50px; border-radius: 18px;
   background: var(--pop-gradient); color: #fff;
