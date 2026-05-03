@@ -44,7 +44,7 @@ body::before {
 button {
   font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer;
 }
-input {
+input, textarea {
   font: inherit; color: inherit;
 }
 
@@ -118,7 +118,7 @@ input {
 .composer__input {
   flex: 1; background: transparent; border: 0; outline: none;
   padding: 16px 0; font-size: 1.1rem; font-weight: 400;
-  font-family: inherit; line-height: 1.5;
+  font-family: inherit; color: var(--text-main); line-height: 1.5;
   resize: none; overflow: hidden;
   min-height: 26px; max-height: 240px;
 }
