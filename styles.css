@@ -21,6 +21,9 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
+/* Force the [hidden] attribute to win over any author display rule. */
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   font-family: 'Outfit', sans-serif;
