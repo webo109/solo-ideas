@@ -7,3 +7,7 @@ node_modules/
 *.log
 .idea/
 .vscode/
+
+# Supabase CLI local cache (per-machine)
+supabase/.temp/
+supabase/.branches/
