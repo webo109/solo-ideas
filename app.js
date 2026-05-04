@@ -106,6 +106,7 @@ const $readerOrganize = $('reader-organize');
 const $readerArchive  = $('reader-archive');
 
 const $chatPanel    = $('chat-panel');
+const $chatFab      = $('chat-fab');
 const $chatClose    = $('chat-close');
 const $chatThreadSel= $('chat-thread-sel');
 const $chatNewBtn   = $('chat-new-btn');
@@ -181,6 +182,7 @@ async function onSignedIn(user) {
   state.user = user;
   $auth.hidden = true;
   $appShell.hidden = false;
+  if ($chatFab) $chatFab.hidden = false;
 
   try {
     await migrateLocalStorageIfNeeded(user.id);
@@ -235,6 +237,7 @@ function onSignedOut() {
   state.items = [];
   state.currentProjectId = null;
   $appShell.hidden = true;
+  if ($chatFab) $chatFab.hidden = true;
   showSignIn();
 }
 
@@ -1083,6 +1086,7 @@ async function runSuggestNow(it) {
 // ====================== Chat panel ======================
 
 $chatBtn.addEventListener('click', () => openChat());
+if ($chatFab) $chatFab.addEventListener('click', () => openChat());
 $chatClose.addEventListener('click', () => closeChat());
 
 async function openChat() {
