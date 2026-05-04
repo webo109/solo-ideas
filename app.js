@@ -211,6 +211,7 @@ async function onSignedIn(user) {
     });
 
     renderAll();
+    startScheduler();
   } catch (e) {
     console.error('Boot failed:', e);
     aiBannerShow('Could not load data. Run migrations 0003 + 0004 in Supabase, then refresh.');
@@ -228,6 +229,7 @@ async function seedProjects(userId) {
 function onSignedOut() {
   state.unsubProjects?.();
   state.unsubItems?.();
+  stopScheduler();
   state.user = null;
   state.projects = [];
   state.items = [];
@@ -274,9 +276,24 @@ function aiBannerShow(text, kind = 'err') {
 
 // ====================== Render ======================
 
+// Defer list re-renders while the user is editing a list field or dragging,
+// so realtime UPDATEs don't blow away in-progress work.
+let _interacting = false;
+let _renderQueued = false;
+function isInteracting() {
+  if (_interacting) return true;
+  if (drag) return true;
+  const ae = document.activeElement;
+  return !!(ae && ae.closest && ae.closest('#list [contenteditable="true"], .item__solution-form'));
+}
+function flushQueuedRender() {
+  if (_renderQueued) { _renderQueued = false; renderMain(); }
+}
+
 function renderAll() { renderSidebar(); renderMain(); renderStreak(); }
 
 function renderSidebar() {
+  if (projDrag) return;  // don't blow away the row mid-drag
   $projList.innerHTML = '';
   for (const p of state.projects) {
     const li = document.createElement('li');
@@ -285,6 +302,7 @@ function renderSidebar() {
     const count = state.items.filter((it) => it.project_id === p.id && it.status !== 'done').length;
     const aiBadge = p.ai_enabled ? '<span class="proj-ai" title="AI on">🤖</span>' : '';
     li.innerHTML = `
+      <button class="proj-handle" type="button" aria-label="Drag to reorder" tabindex="-1">⋮⋮</button>
       <span class="proj-dot" style="background:${escapeHtml(p.color)}"></span>
       <span class="proj-name">${escapeHtml(p.name)}</span>
       ${aiBadge}
@@ -295,6 +313,7 @@ function renderSidebar() {
 }
 
 function renderMain() {
+  if (isInteracting()) { _renderQueued = true; return; }
   const proj = currentProject();
   if (!proj) {
     $panelHeader.hidden = true; $banner.hidden = true; $viewToggle.hidden = true;
@@ -503,12 +522,72 @@ function getItem(id) { return state.items.find((x) => x.id === id); }
 // ====================== Sidebar ======================
 
 $projList.addEventListener('click', (e) => {
+  if (e.target.closest('.proj-handle')) return;  // handle clicks are for drag, not selection
   const li = e.target.closest('.proj');
   if (!li) return;
   state.currentProjectId = li.dataset.id;
   localStorage.setItem('solo.lastProjectId', state.currentProjectId);
   renderAll();
 });
+
+// ---- project drag-to-reorder (sidebar) ----
+let projDrag = null;
+$projList.addEventListener('pointerdown', (e) => {
+  if (e.button !== undefined && e.button !== 0) return;
+  const handle = e.target.closest('.proj-handle');
+  if (!handle) return;
+  const row = handle.closest('.proj');
+  if (!row) return;
+  e.preventDefault();
+  handle.setPointerCapture(e.pointerId);
+  projDrag = { pointerId: e.pointerId, handle, row, startY: e.clientY };
+  row.classList.add('proj--dragging');
+});
+$projList.addEventListener('pointermove', (e) => {
+  if (!projDrag || e.pointerId !== projDrag.pointerId) return;
+  const dy = e.clientY - projDrag.startY;
+  projDrag.row.style.transform = `translateY(${dy}px) scale(1.02)`;
+  const draggedRect = projDrag.row.getBoundingClientRect();
+  const draggedMid = draggedRect.top + draggedRect.height / 2;
+  const sibs = [...$projList.children].filter((c) => c !== projDrag.row);
+  for (const sib of sibs) {
+    const r = sib.getBoundingClientRect();
+    const sibMid = r.top + r.height / 2;
+    const isBefore = !!(projDrag.row.compareDocumentPosition(sib) & Node.DOCUMENT_POSITION_PRECEDING);
+    const isAfter  = !!(projDrag.row.compareDocumentPosition(sib) & Node.DOCUMENT_POSITION_FOLLOWING);
+    if (dy < 0 && isBefore && draggedMid < sibMid) {
+      $projList.insertBefore(projDrag.row, sib);
+      const newRect = projDrag.row.getBoundingClientRect();
+      projDrag.startY += newRect.top - draggedRect.top;
+      projDrag.row.style.transform = `translateY(${e.clientY - projDrag.startY}px) scale(1.02)`;
+      break;
+    }
+    if (dy > 0 && isAfter && draggedMid > sibMid) {
+      $projList.insertBefore(projDrag.row, sib.nextSibling);
+      const newRect = projDrag.row.getBoundingClientRect();
+      projDrag.startY += newRect.top - draggedRect.top;
+      projDrag.row.style.transform = `translateY(${e.clientY - projDrag.startY}px) scale(1.02)`;
+      break;
+    }
+  }
+});
+async function endProjDrag() {
+  if (!projDrag) return;
+  projDrag.row.classList.remove('proj--dragging');
+  projDrag.row.style.transform = '';
+  const newOrder = [...$projList.children].map((li) => li.dataset.id);
+  projDrag = null;
+  newOrder.forEach((id, i) => {
+    const p = state.projects.find((x) => x.id === id);
+    if (p) p.position = (i + 1) * POSITION_GAP;
+  });
+  state.projects.sort((a, b) => a.position - b.position);
+  try { await Api.reorderProjects(newOrder); }
+  catch (e) { console.error('project reorder failed:', e); }
+  renderSidebar();
+}
+$projList.addEventListener('pointerup',     (e) => { if (projDrag && e.pointerId === projDrag.pointerId) endProjDrag(); });
+$projList.addEventListener('pointercancel', (e) => { if (projDrag && e.pointerId === projDrag.pointerId) endProjDrag(); });
 $newProjBtn.addEventListener('click', () => openProjectModal(null));
 $renameBtn.addEventListener('click', () => openProjectModal(state.currentProjectId));
 $deleteBtn.addEventListener('click', () => onDeleteProject());
@@ -576,8 +655,16 @@ async function addItem(text) {
       project_id: proj.id, kind: state.currentKind, text: trimmed,
       status: 'open', position: newPos,
     });
-    const i = state.items.findIndex((x) => x.id === tempId);
-    if (i >= 0) state.items[i] = created;
+    const tempIdx = state.items.findIndex((x) => x.id === tempId);
+    const realIdx = state.items.findIndex((x) => x.id === created.id && !x._temp);
+    if (realIdx >= 0) {
+      // Realtime INSERT beat us — drop the temp, keep the realtime row.
+      if (tempIdx >= 0) state.items.splice(tempIdx, 1);
+    } else if (tempIdx >= 0) {
+      state.items[tempIdx] = created;
+    } else {
+      state.items.push(created);
+    }
     renderMain();
 
     // Auto-organize on save for docs in AI-on projects
@@ -686,14 +773,14 @@ $list.addEventListener('focusout', async (e) => {
   if (!target || target.dataset.editing !== '1') return;
   const li = target.closest('.item, .doc');
   const it = getItem(li?.dataset.id);
-  if (!it) return;
+  if (!it) { setTimeout(flushQueuedRender, 0); return; }
   const newValue = (target.textContent || '').trim();
   const isSolution = target.dataset.kind === 'solution';
   target.dataset.editing = '0';
   target.contentEditable = 'false';
   const original = isSolution ? (it.solution || '') : (it.text || '');
-  if (newValue === original) { target.innerHTML = renderMarkdown(original); return; }
-  if (!isSolution && !newValue) { target.innerHTML = renderMarkdown(it.text); return; }
+  if (newValue === original) { target.innerHTML = renderMarkdown(original); setTimeout(flushQueuedRender, 0); return; }
+  if (!isSolution && !newValue) { target.innerHTML = renderMarkdown(it.text); setTimeout(flushQueuedRender, 0); return; }
   const patch = isSolution ? { solution: newValue || null } : { text: newValue };
   try {
     const updated = await Api.updateItem(it.id, patch);
@@ -701,6 +788,7 @@ $list.addEventListener('focusout', async (e) => {
     if (i>=0) state.items[i] = updated;
     target.innerHTML = renderMarkdown(isSolution ? (updated.solution || '') : updated.text);
   } catch (err) { console.error(err); target.innerHTML = renderMarkdown(original); }
+  finally { setTimeout(flushQueuedRender, 0); }
 });
 $list.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && !e.shiftKey) {
@@ -715,7 +803,7 @@ function startAddingSolution(li, it) {
   const btn = body.querySelector('.item__add-solution');
   if (!btn) return;
   btn.outerHTML = `
-    <form class="item__solution-form" data-id="${it.id}">
+    <form class="item__solution-form" data-id="${escapeHtml(it.id)}">
       <input type="text" class="item__solution-input" placeholder="Type solution & hit enter…" maxlength="5000" />
       <button type="submit" class="icon-btn icon-btn--small" aria-label="Save">✓</button>
       <button type="button" class="icon-btn icon-btn--small icon-btn--ghost" data-action="cancel-solution" aria-label="Cancel">×</button>
@@ -912,6 +1000,64 @@ function closeAiMenu() {
   document.removeEventListener('click', onMenuOutside, { capture: true });
 }
 
+// Browser-based AI scheduler.
+// Items with ai_schedule = daily/weekly/monthly are checked when the app boots
+// and again every 15 minutes while open. Due items get ai-suggest run on them,
+// rate-limited to MAX_AUTO_RUNS per scan to avoid quota/cost spikes.
+
+const SCHEDULE_INTERVAL_MS = {
+  daily:   24 * 60 * 60 * 1000,
+  weekly:  7 * 24 * 60 * 60 * 1000,
+  monthly: 30 * 24 * 60 * 60 * 1000,
+};
+const MAX_AUTO_RUNS = 3;
+const SCHEDULE_SCAN_MS = 15 * 60 * 1000;
+
+function findDueItems() {
+  const projAi = new Map(state.projects.map((p) => [p.id, !!p.ai_enabled]));
+  const now = Date.now();
+  const due = [];
+  for (const it of state.items) {
+    if (it._temp) continue;
+    if (it.status === 'done') continue;
+    if (it.kind !== 'idea' && it.kind !== 'task') continue;
+    if (!projAi.get(it.project_id)) continue;
+    const sched = it.ai_schedule || 'off';
+    if (sched === 'off' || sched === 'manual') continue;
+    const interval = SCHEDULE_INTERVAL_MS[sched];
+    if (!interval) continue;
+    const last = it.ai_last_run_at ? new Date(it.ai_last_run_at).getTime() : 0;
+    if (now - last >= interval) due.push(it);
+  }
+  // Oldest-first
+  due.sort((a, b) =>
+    (a.ai_last_run_at ? new Date(a.ai_last_run_at).getTime() : 0) -
+    (b.ai_last_run_at ? new Date(b.ai_last_run_at).getTime() : 0));
+  return due.slice(0, MAX_AUTO_RUNS);
+}
+
+async function runScheduledSuggestions() {
+  if (!state.user) return;
+  const due = findDueItems();
+  if (!due.length) return;
+  for (const it of due) {
+    if (state.aiBusy.has(it.id)) continue;
+    try { await runSuggestNow(it); }
+    catch (e) { console.error('scheduled suggest failed for', it.id, e); }
+  }
+}
+
+let _schedTimer = null;
+function startScheduler() {
+  if (_schedTimer) return;
+  // First scan after a small delay so initial render finishes first.
+  setTimeout(runScheduledSuggestions, 4_000);
+  _schedTimer = setInterval(runScheduledSuggestions, SCHEDULE_SCAN_MS);
+}
+function stopScheduler() {
+  if (_schedTimer) { clearInterval(_schedTimer); _schedTimer = null; }
+}
+
 async function runSuggestNow(it) {
   if (state.aiBusy.has(it.id)) return;
   state.aiBusy.add(it.id);
@@ -1002,6 +1148,138 @@ $chatNewBtn.addEventListener('click', async () => {
   } catch (e) { console.error(e); }
 });
 
+// ============ Agent: tool execution ============
+
+function findProjectByName(name) {
+  if (!name) return null;
+  const lower = String(name).toLowerCase();
+  return state.projects.find(p =>
+    p.name.toLowerCase() === lower ||
+    p.name.toLowerCase().includes(lower)
+  );
+}
+
+async function executeTool(name, args) {
+  try {
+    if (name === 'list_projects') {
+      const aiOn = state.projects.filter(p => p.ai_enabled);
+      return aiOn.map(p => ({
+        id: p.id, name: p.name, color: p.color,
+        item_count: state.items.filter(it => it.project_id === p.id && it.status !== 'done').length,
+      }));
+    }
+    if (name === 'list_items') {
+      let pool = state.items;
+      if (args.project_name) {
+        const p = findProjectByName(args.project_name);
+        if (!p) return { error: `Project "${args.project_name}" not found or not AI-on.` };
+        pool = pool.filter(it => it.project_id === p.id);
+      } else {
+        const aiIds = new Set(state.projects.filter(p => p.ai_enabled).map(p => p.id));
+        pool = pool.filter(it => aiIds.has(it.project_id));
+      }
+      if (args.kind)   pool = pool.filter(it => it.kind === args.kind);
+      if (args.status) pool = pool.filter(it => it.status === args.status);
+      if (args.pinned) pool = pool.filter(it => !!it.pinned);
+      const limit = Math.min(50, Math.max(1, args.limit || 30));
+      const projById = Object.fromEntries(state.projects.map(p => [p.id, p.name]));
+      return pool.slice(0, limit).map(it => ({
+        id: it.id, project: projById[it.project_id] || '?',
+        kind: it.kind, status: it.status, pinned: !!it.pinned,
+        text: (it.text || '').slice(0, 200),
+        updated_at: it.updated_at, done_at: it.done_at || null,
+      }));
+    }
+    if (name === 'create_item') {
+      const proj = findProjectByName(args.project_name);
+      if (!proj) return { error: `Project "${args.project_name}" not found.` };
+      const projItems = state.items.filter(x => x.project_id === proj.id && x.kind === args.kind);
+      const minPos = projItems.length ? Math.min(...projItems.map(x => x.position)) : POSITION_GAP * 2;
+      const created = await Api.createItem(state.user.id, {
+        project_id: proj.id, kind: args.kind, text: args.text,
+        status: 'open', position: minPos - POSITION_GAP,
+      });
+      const i = state.items.findIndex(x => x.id === created.id);
+      if (i >= 0) state.items[i] = created; else state.items.push(created);
+      renderAll();
+      return { success: true, item_id: created.id, project: proj.name };
+    }
+    if (name === 'update_item_status') {
+      const it = getItem(args.item_id);
+      if (!it) return { error: `Item ${args.item_id} not found.` };
+      const updated = await Api.updateItem(it.id, { status: args.status });
+      const i = state.items.findIndex(x => x.id === updated.id);
+      if (i >= 0) state.items[i] = updated;
+      renderAll();
+      return { success: true, status: updated.status };
+    }
+    if (name === 'update_item_text') {
+      const it = getItem(args.item_id);
+      if (!it) return { error: `Item ${args.item_id} not found.` };
+      const updated = await Api.updateItem(it.id, { text: args.text });
+      const i = state.items.findIndex(x => x.id === updated.id);
+      if (i >= 0) state.items[i] = updated;
+      renderAll();
+      return { success: true };
+    }
+    if (name === 'create_project') {
+      const maxPos = state.projects.length ? Math.max(...state.projects.map(p => p.position)) : 0;
+      const created = await Api.createProject(state.user.id, {
+        name: args.name,
+        color: args.color || '#7f00ff',
+        position: maxPos + POSITION_GAP,
+      });
+      state.projects.push(created);
+      renderAll();
+      return { success: true, project_id: created.id, name: created.name };
+    }
+    return { error: `Unknown tool ${name}` };
+  } catch (e) {
+    return { error: e.message || String(e) };
+  }
+}
+
+function appendToolCard(toolCall, onConfirm, onCancel) {
+  const card = document.createElement('div');
+  card.className = 'cmsg cmsg--tool';
+  const isWrite = AI.WRITE_TOOLS.has(toolCall.name);
+  card.innerHTML = `
+    <div class="cmsg__tool">
+      <div class="cmsg__tool-head">
+        <span class="cmsg__tool-icon">${isWrite ? '✎' : '🔍'}</span>
+        <span class="cmsg__tool-name">${escapeHtml(AI.describeToolCall(toolCall.name, toolCall.args))}</span>
+      </div>
+      ${isWrite ? `
+        <div class="cmsg__tool-actions">
+          <button class="btn-sm btn-sm--cancel" type="button" data-tool-cancel>Cancel</button>
+          <button class="btn-sm btn-sm--confirm" type="button" data-tool-confirm>Confirm</button>
+        </div>
+      ` : '<div class="cmsg__tool-status">Running…</div>'}
+    </div>
+  `;
+  $chatMessages.appendChild(card);
+  $chatMessages.scrollTop = $chatMessages.scrollHeight;
+  if (isWrite) {
+    card.querySelector('[data-tool-confirm]')?.addEventListener('click', () => {
+      card.querySelector('.cmsg__tool-actions').innerHTML = '<span class="cmsg__tool-status">Running…</span>';
+      onConfirm();
+    });
+    card.querySelector('[data-tool-cancel]')?.addEventListener('click', () => {
+      card.querySelector('.cmsg__tool-actions').innerHTML = '<span class="cmsg__tool-status cmsg__tool-status--cancelled">Cancelled</span>';
+      onCancel();
+    });
+  }
+  return card;
+}
+
+function setToolCardResult(card, ok, label) {
+  const status = card.querySelector('.cmsg__tool-status, .cmsg__tool-actions');
+  if (!status) return;
+  status.outerHTML = `<span class="cmsg__tool-status ${ok ? 'cmsg__tool-status--ok' : 'cmsg__tool-status--err'}">${ok ? '✓' : '✗'} ${escapeHtml(label || (ok ? 'Done' : 'Failed'))}</span>`;
+}
+
+// ============ Agent: chat submit (replaces streaming) ============
+
 $chatForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const text = $chatInput.value.trim();
@@ -1014,39 +1292,70 @@ $chatForm.addEventListener('submit', async (e) => {
   state.chatMessages.push(userMsg);
   appendMessageNode(userMsg);
 
-  // Streaming assistant message
-  const placeholder = document.createElement('div');
-  placeholder.className = 'cmsg cmsg--assistant';
-  placeholder.innerHTML = `<div class="cmsg__bubble cmsg__bubble--ai" data-md>…</div>`;
-  $chatMessages.appendChild(placeholder);
-  const bubble = placeholder.querySelector('.cmsg__bubble');
-  $chatMessages.scrollTop = $chatMessages.scrollHeight;
-
   state.chatStreaming = true;
   try {
-    const history = state.chatMessages.slice(-10).map(m => ({ role: m.role, content: m.content }));
-    let acc = '';
-    await AI.chatStream({
-      message: text,
-      history,
-      onChunk: (_chunk, full) => {
-        acc = full;
-        bubble.innerHTML = renderMarkdown(full);
-        $chatMessages.scrollTop = $chatMessages.scrollHeight;
-      },
-      onDone: async (full) => {
-        try {
-          const m = await Api.appendChatMessage(state.user.id, state.chatThreadId, 'assistant', full);
-          state.chatMessages.push(m);
-          placeholder.dataset.id = m.id;
-        } catch (e) { console.error(e); }
-      },
-      onError: (e) => {
-        bubble.innerHTML = `<em style="color:#ff5d8f">${escapeHtml(e.message || 'AI failed')}</em>`;
-      },
-    });
+    // Build initial turns from recent persisted history + the new user message.
+    const turns = state.chatMessages.slice(-10, -1).map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', content: m.content }));
+    turns.push({ role: 'user', content: text });
+
+    let safety = 0;
+    while (safety++ < 8) {
+      const result = await AI.chatTurn({ turns });
+
+      if (result.type === 'text') {
+        const m = await Api.appendChatMessage(state.user.id, state.chatThreadId, 'assistant', result.text);
+        state.chatMessages.push(m);
+        appendMessageNode(m);
+        break;
+      }
+
+      if (result.type === 'tool_call') {
+        const tc = result.tool;
+        // Record the model turn so the next call sees the same history.
+        turns.push({ role: 'model', functionCall: { name: tc.name, args: tc.args } });
+
+        const isRead = AI.READ_TOOLS.has(tc.name);
+        if (isRead) {
+          const card = appendToolCard(tc);
+          const response = await executeTool(tc.name, tc.args);
+          const ok = !response?.error;
+          setToolCardResult(card, ok, ok ? `${Array.isArray(response) ? response.length + ' results' : 'Done'}` : response.error);
+          turns.push({ role: 'function', name: tc.name, response });
+          continue;
+        }
+
+        // Write tool: confirmation required.
+        const userChoice = await new Promise((resolve) => {
+          const card = appendToolCard(tc,
+            async () => {
+              const response = await executeTool(tc.name, tc.args);
+              const ok = !response?.error;
+              setToolCardResult(card, ok, ok ? 'Done' : response.error);
+              resolve({ confirmed: true, response });
+            },
+            () => resolve({ confirmed: false, response: { error: 'User cancelled.' } })
+          );
+        });
+        turns.push({ role: 'function', name: tc.name, response: userChoice.response });
+
+        if (!userChoice.confirmed) {
+          // Tell the model the user cancelled and let it respond.
+          // (loop continues; model gets the cancellation as a function response)
+        }
+        continue;
+      }
+
+      // Unknown response shape; bail.
+      break;
+    }
+  } catch (err) {
+    const errMsg = document.createElement('div');
+    errMsg.className = 'cmsg cmsg--assistant';
+    errMsg.innerHTML = `<div class="cmsg__bubble cmsg__bubble--ai"><em style="color:#ff5d8f">${escapeHtml(err.message || 'AI failed')}</em></div>`;
+    $chatMessages.appendChild(errMsg);
   } finally {
     state.chatStreaming = false;
+    $chatMessages.scrollTop = $chatMessages.scrollHeight;
   }
 });
 
@@ -1126,6 +1435,7 @@ async function endDrag() {
   persistableIds.forEach((id, i) => { const it = getItem(id); if (it) it.position = (i + 1) * POSITION_GAP; });
   try { await Api.reorderItems(persistableIds); }
   catch (e) { console.error('reorder failed:', e); }
+  flushQueuedRender();
 }
 $list.addEventListener('pointerup',     (e) => { if (drag && e.pointerId === drag.pointerId) endDrag(); });
 $list.addEventListener('pointercancel', (e) => { if (drag && e.pointerId === drag.pointerId) endDrag(); });

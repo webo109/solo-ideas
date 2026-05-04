@@ -1,5 +1,5 @@
 // deno-lint-ignore-file no-explicit-any
-const DEFAULT_MODEL = 'gemini-2.0-flash-exp';
+const DEFAULT_MODEL = 'gemini-2.5-flash';
 
 export async function callGemini(opts: {
   prompt: string;
@@ -10,7 +10,7 @@ export async function callGemini(opts: {
   if (!apiKey) throw new Error('GEMINI_API_KEY is not set on this Edge Function.');
 
   const model = Deno.env.get('GEMINI_MODEL') || DEFAULT_MODEL;
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
   const body: any = {
     contents: [{ role: 'user', parts: [{ text: opts.prompt }] }],
@@ -27,7 +27,10 @@ export async function callGemini(opts: {
 
   const res = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey,
+    },
     body: JSON.stringify(body),
   });
 
@@ -50,7 +53,7 @@ export async function callGeminiStream(opts: {
   if (!apiKey) throw new Error('GEMINI_API_KEY is not set on this Edge Function.');
 
   const model = Deno.env.get('GEMINI_MODEL') || DEFAULT_MODEL;
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse`;
 
   const body: any = {
     contents: [{ role: 'user', parts: [{ text: opts.prompt }] }],
@@ -65,7 +68,10 @@ export async function callGeminiStream(opts: {
 
   const res = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey,
+    },
     body: JSON.stringify(body),
   });
   if (!res.ok || !res.body) {

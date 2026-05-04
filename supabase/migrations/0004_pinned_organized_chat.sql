@@ -35,7 +35,7 @@ alter table public.projects add column if not exists ai_enabled boolean not null
 -- ================================================================
 
 create table if not exists public.chat_threads (
-  id          uuid primary key default uuid_generate_v4(),
+  id          uuid primary key default gen_random_uuid(),
   user_id     uuid not null references auth.users(id) on delete cascade,
   title       text not null default 'Chat',
   day         date not null default current_date,
@@ -50,7 +50,7 @@ create index if not exists chat_threads_user_updated_idx
   on public.chat_threads (user_id, updated_at desc);
 
 create table if not exists public.chat_messages (
-  id          uuid primary key default uuid_generate_v4(),
+  id          uuid primary key default gen_random_uuid(),
   user_id     uuid not null references auth.users(id) on delete cascade,
   thread_id   uuid not null references public.chat_threads(id) on delete cascade,
   role        text not null check (role in ('user', 'assistant', 'system')),

@@ -36,36 +36,39 @@ export async function suggestForItem({ kind, text, solution }) {
   return suggestions;
 }
 
-export async function chatStream({ message, history, onChunk, onDone, onError }) {
-  try {
-    const headers = await authHeaders();
-    const url = `${FUNCTIONS_BASE}/ai-chat`;
-    const res = await fetch(url, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ message, history }),
-    });
-    if (!res.ok || !res.body) {
-      const t = await res.text().catch(() => '');
-      let m = t;
-      try { m = JSON.parse(t).error || t; } catch { /* ignore */ }
-      throw new Error(`ai-chat: ${res.status} ${m || res.statusText}`);
+// Agent turn (function-calling). Returns either {type:'text', text} or {type:'tool_call', tool}.
+// Frontend manages the multi-turn loop.
+export async function chatTurn({ turns }) {
+  return await callFn('ai-chat', { turns });
+}
+
+// Read tools execute without confirmation; write tools require it.
+export const READ_TOOLS  = new Set(['list_projects', 'list_items']);
+export const WRITE_TOOLS = new Set(['create_item', 'update_item_status', 'update_item_text', 'create_project']);
+
+// Human-readable description of a proposed action.
+export function describeToolCall(name, args) {
+  switch (name) {
+    case 'list_projects':
+      return 'List your projects';
+    case 'list_items': {
+      const filters = [];
+      if (args.project_name) filters.push(`in ${args.project_name}`);
+      if (args.kind)         filters.push(args.kind + 's');
+      if (args.status)       filters.push(args.status);
+      if (args.pinned)       filters.push('pinned');
+      return `List items ${filters.join(' · ') || '(all)'}`;
     }
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let full = '';
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      const chunk = decoder.decode(value, { stream: true });
-      full += chunk;
-      onChunk?.(chunk, full);
-    }
-    onDone?.(full);
-    return full;
-  } catch (e) {
-    onError?.(e);
-    throw e;
+    case 'create_item':
+      return `Create ${args.kind} in ${args.project_name}: "${args.text?.slice(0, 80)}${(args.text||'').length > 80 ? '…' : ''}"`;
+    case 'update_item_status':
+      return `Set item to ${args.status === 'done' ? 'archived' : args.status}`;
+    case 'update_item_text':
+      return `Edit item text → "${args.text?.slice(0, 80)}${(args.text||'').length > 80 ? '…' : ''}"`;
+    case 'create_project':
+      return `Create project "${args.name}"`;
+    default:
+      return `Run ${name}`;
   }
 }
 

@@ -94,7 +94,17 @@ export async function getOrCreateTodayThread(userId) {
     .from('chat_threads')
     .insert({ user_id: userId, title: niceTitle, day: today })
     .select().single();
-  if (error) throw error;
+  if (error) {
+    // Race: another tab created today's thread between our select and insert.
+    if (error.code === '23505') {
+      const { data: row, error: e2 } = await supabase
+        .from('chat_threads').select('*')
+        .eq('user_id', userId).eq('day', today).single();
+      if (e2) throw e2;
+      return row;
+    }
+    throw error;
+  }
   return data;
 }
 
