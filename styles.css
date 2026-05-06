@@ -344,7 +344,11 @@ input, textarea {
 }
 
 .item__body { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
-.item__text { font-size: 1rem; line-height: 1.55; word-wrap: break-word; }
+.item__text {
+  font-size: 1rem; line-height: 1.55;
+  word-wrap: break-word; overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
 .item__text > p:first-child { margin-top: 0; }
 .item__text > p:last-child  { margin-bottom: 0; }
 .item__text p { margin: 0.5em 0; }
@@ -400,7 +404,7 @@ input, textarea {
   font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px;
   font-weight: 700; opacity: 0.85; margin-bottom: 4px;
 }
-.solution__text { line-height: 1.5; }
+.solution__text { line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: anywhere; }
 .item__add-solution {
   font-size: 0.82rem; color: var(--text-muted);
   background: rgba(255,255,255,0.04); padding: 4px 12px; border-radius: 7px;

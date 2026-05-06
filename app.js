@@ -430,7 +430,7 @@ function regularItemNode(it, proj) {
       <span class="item__check-mark"></span>
     </button>
     <div class="item__body">
-      <div class="item__text" data-md contenteditable="${isArchive ? 'false' : 'true'}" spellcheck="false">${renderMarkdown(it.text)}</div>
+      <div class="item__text" data-md contenteditable="${isArchive ? 'false' : 'true'}" spellcheck="false">${escapeHtml(it.text)}</div>
       ${showSolution ? renderSolutionBlock(it) : ''}
       ${suggestionsBlock}
     </div>
@@ -483,7 +483,7 @@ function renderSolutionBlock(it) {
   if (it.solution) {
     return `<div class="item__solution">
       <div class="item__solution-label">Solution</div>
-      <div class="solution__text" data-md contenteditable="true" spellcheck="false">${renderMarkdown(it.solution)}</div>
+      <div class="solution__text" data-md contenteditable="true" spellcheck="false">${escapeHtml(it.solution)}</div>
     </div>`;
   }
   return `<button class="item__add-solution" type="button" data-action="add-solution">+ Add Solution</button>`;
@@ -821,6 +821,7 @@ async function deleteItem(it) {
 }
 
 // Inline-editable text + solution + AI suggestions
+// items + solutions render as plain text (no swap needed); suggestions render markdown so we swap on focus.
 $list.addEventListener('focusin', (e) => {
   const target = e.target.closest('[data-md]');
   if (!target) return;
@@ -834,16 +835,15 @@ $list.addEventListener('focusin', (e) => {
   if (target.dataset.suggestions !== undefined || target.closest('.suggestions__body')) kind = 'ai_suggestions';
   else if (target.classList.contains('solution__text'))                                    kind = 'solution';
 
-  const raw =
-    kind === 'ai_suggestions' ? (it.ai_suggestions || '') :
-    kind === 'solution'       ? (it.solution || '') :
-                                (it.text || '');
   target.dataset.editing = '1';
   target.dataset.kind = kind;
-  target.contentEditable = 'true';
-  target.spellcheck = true;
-  target.textContent = raw;
+
+  // Only suggestions need swap from rendered markdown -> raw text for editing.
+  if (kind === 'ai_suggestions') {
+    target.textContent = it.ai_suggestions || '';
+  }
 });
+
 $list.addEventListener('focusout', async (e) => {
   const target = e.target.closest('[data-md]');
   if (!target || target.dataset.editing !== '1') return;
@@ -853,14 +853,24 @@ $list.addEventListener('focusout', async (e) => {
   const newValue = (target.textContent || '').trim();
   const kind = target.dataset.kind || 'text';
   target.dataset.editing = '0';
-  // Keep contenteditable=true so a subsequent click re-enters edit mode without focus tricks.
 
   const original =
     kind === 'ai_suggestions' ? (it.ai_suggestions || '') :
     kind === 'solution'       ? (it.solution || '') :
                                 (it.text || '');
-  if (newValue === original) { target.innerHTML = renderMarkdown(original); setTimeout(flushQueuedRender, 0); return; }
-  if (kind === 'text' && !newValue) { target.innerHTML = renderMarkdown(it.text); setTimeout(flushQueuedRender, 0); return; }
+
+  // Suggestions: re-render markdown after edit (or on no-op).
+  // text/solution: stay as plain text, so just keep textContent as-is.
+  if (newValue === original) {
+    if (kind === 'ai_suggestions') target.innerHTML = renderMarkdown(original);
+    setTimeout(flushQueuedRender, 0);
+    return;
+  }
+  if (kind === 'text' && !newValue) {
+    target.textContent = it.text;
+    setTimeout(flushQueuedRender, 0);
+    return;
+  }
 
   const patch =
     kind === 'ai_suggestions' ? { ai_suggestions: newValue || null } :
@@ -870,12 +880,15 @@ $list.addEventListener('focusout', async (e) => {
     const updated = await Api.updateItem(it.id, patch);
     const i = state.items.findIndex((x) => x.id === updated.id);
     if (i>=0) state.items[i] = updated;
-    const newRaw =
-      kind === 'ai_suggestions' ? (updated.ai_suggestions || '') :
-      kind === 'solution'       ? (updated.solution || '') :
-                                  updated.text;
-    target.innerHTML = renderMarkdown(newRaw);
-  } catch (err) { console.error(err); target.innerHTML = renderMarkdown(original); }
+    if (kind === 'ai_suggestions') {
+      target.innerHTML = renderMarkdown(updated.ai_suggestions || '');
+    }
+    // text/solution already display the new value via textContent — nothing to do.
+  } catch (err) {
+    console.error(err);
+    if (kind === 'ai_suggestions') target.innerHTML = renderMarkdown(original);
+    else                            target.textContent = original;
+  }
   finally { setTimeout(flushQueuedRender, 0); }
 });
 $list.addEventListener('keydown', (e) => {
