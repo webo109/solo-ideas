@@ -593,7 +593,7 @@ input, textarea {
 /* ============ Item AI suggestions ============ */
 .item__suggestions {
   margin-top: 4px;
-  padding: 8px 12px;
+  padding: 10px 14px;
   background: rgba(127,0,255,0.06);
   border: 1px solid rgba(127,0,255,0.2);
   border-radius: 10px;
@@ -603,9 +603,24 @@ input, textarea {
   cursor: pointer; user-select: none;
   font-size: 0.82rem; font-weight: 600;
   color: #d4a8ff;
+  display: flex; align-items: center; gap: 8px;
 }
-.suggestions__body { margin-top: 8px; line-height: 1.55; color: var(--text-main); }
+.suggestions__hint {
+  font-weight: 400; font-size: 0.74rem; color: var(--text-dim);
+  font-style: italic;
+}
+.suggestions__body {
+  margin-top: 10px; line-height: 1.55; color: var(--text-main);
+  cursor: text;
+}
 .suggestions__body h2 { font-size: 1rem; margin: 0.7em 0 0.3em; }
+.suggestions__body p:first-child { margin-top: 0; }
+.suggestions__body p:last-child  { margin-bottom: 0; }
+.suggestions__actions {
+  margin-top: 12px;
+  display: flex; gap: 8px; flex-wrap: wrap;
+  padding-top: 10px; border-top: 1px solid rgba(127,0,255,0.18);
+}
 
 /* ============ Sidebar AI badge ============ */
 .proj-ai {

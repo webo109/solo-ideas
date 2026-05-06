@@ -413,7 +413,15 @@ function regularItemNode(it, proj) {
     : '';
 
   const suggestionsBlock = it.ai_suggestions
-    ? `<details class="item__suggestions"><summary>✨ AI suggestions${it.ai_last_run_at ? ' · ' + relTime(it.ai_last_run_at) : ''}</summary><div class="suggestions__body" data-md>${renderMarkdown(it.ai_suggestions)}</div></details>`
+    ? `<details class="item__suggestions" open>
+         <summary>✨ AI suggestions${it.ai_last_run_at ? ' · ' + relTime(it.ai_last_run_at) : ''}<span class="suggestions__hint">click any suggestion to edit</span></summary>
+         <div class="suggestions__body" data-md data-suggestions contenteditable="${isArchive ? 'false' : 'true'}" spellcheck="false">${renderMarkdown(it.ai_suggestions)}</div>
+         ${isArchive ? '' : `<div class="suggestions__actions">
+           <button class="btn-sm" type="button" data-action="suggest-create-task" title="Create a new task in this project from the (edited) text">+ Add as task</button>
+           ${it.kind === 'idea' ? '<button class="btn-sm" type="button" data-action="suggest-apply-solution" title="Replace this idea\'s solution with the (edited) text">Use as solution</button>' : ''}
+           <button class="btn-sm icon-btn--danger" type="button" data-action="suggest-clear" title="Remove the AI suggestion block">Clear</button>
+         </div>`}
+       </details>`
     : '';
 
   li.innerHTML = `
@@ -699,7 +707,66 @@ $list.addEventListener('click', async (e) => {
   if (action === 'delete')        return state.currentView === 'archive' ? confirmDelete(it) : confirmDelete(it);
   if (action === 'add-solution')  return startAddingSolution(li, it);
   if (action === 'ai-menu')       return openAiMenu(it, e.target.closest('.ai-chip'));
+  if (action === 'suggest-create-task')   return suggestionToTask(it, li);
+  if (action === 'suggest-apply-solution') return suggestionToSolution(it, li);
+  if (action === 'suggest-clear')          return clearSuggestions(it);
 });
+
+// Read the current text from the suggestions block (handles in-edit textContent vs rendered HTML).
+function currentSuggestionsText(li) {
+  const body = li.querySelector('.suggestions__body');
+  if (!body) return '';
+  // If user is mid-edit, body has plain textContent. Otherwise it has rendered HTML — fall back to stored value.
+  if (body.dataset.editing === '1') return (body.textContent || '').trim();
+  return '';
+}
+
+async function suggestionToTask(it, li) {
+  const editText = currentSuggestionsText(li);
+  const text = (editText || it.ai_suggestions || '').trim();
+  if (!text) return;
+  const proj = state.projects.find(p => p.id === it.project_id);
+  if (!proj) return;
+  const projTasks = state.items.filter(x => x.project_id === proj.id && x.kind === 'task');
+  const minPos = projTasks.length ? Math.min(...projTasks.map(x => x.position)) : POSITION_GAP * 2;
+  try {
+    const created = await Api.createItem(state.user.id, {
+      project_id: proj.id, kind: 'task', text,
+      status: 'open', position: minPos - POSITION_GAP,
+    });
+    state.items.push(created);
+    aiBannerShow(`Added as task in ${proj.name}.`, 'ok');
+    renderMain();
+  } catch (e) {
+    console.error(e);
+    aiBannerShow('Could not create task: ' + (e.message || e));
+  }
+}
+
+async function suggestionToSolution(it, li) {
+  const editText = currentSuggestionsText(li);
+  const text = (editText || it.ai_suggestions || '').trim();
+  if (!text) return;
+  try {
+    const updated = await Api.updateItem(it.id, { solution: text });
+    const i = state.items.findIndex(x => x.id === updated.id);
+    if (i>=0) state.items[i] = updated;
+    aiBannerShow('Applied as solution.', 'ok');
+    renderMain();
+  } catch (e) {
+    console.error(e);
+    aiBannerShow('Could not apply: ' + (e.message || e));
+  }
+}
+
+async function clearSuggestions(it) {
+  try {
+    const updated = await Api.updateItem(it.id, { ai_suggestions: null });
+    const i = state.items.findIndex(x => x.id === updated.id);
+    if (i>=0) state.items[i] = updated;
+    renderMain();
+  } catch (e) { console.error(e); }
+}
 
 async function cycleStatus(it, sourceEl) {
   const next = it.status === 'open' ? 'today' : it.status === 'today' ? 'done' : 'open';
@@ -753,20 +820,26 @@ async function deleteItem(it) {
   catch (e) { console.error(e); state.items.push(it); renderMain(); }
 }
 
-// Inline-editable text + solution
+// Inline-editable text + solution + AI suggestions
 $list.addEventListener('focusin', (e) => {
   const target = e.target.closest('[data-md]');
   if (!target) return;
   if (target.dataset.editing === '1') return;
-  if (target.closest('.suggestions__body')) return;  // suggestions are not editable
   const li = target.closest('.item, .doc');
   const it = getItem(li?.dataset.id);
   if (!it || it._temp) return;
   if (it.kind === 'doc') return; // docs use the reader
-  const isSolution = target.classList.contains('solution__text');
-  const raw = isSolution ? (it.solution || '') : (it.text || '');
+
+  let kind = 'text';
+  if (target.dataset.suggestions !== undefined || target.closest('.suggestions__body')) kind = 'ai_suggestions';
+  else if (target.classList.contains('solution__text'))                                    kind = 'solution';
+
+  const raw =
+    kind === 'ai_suggestions' ? (it.ai_suggestions || '') :
+    kind === 'solution'       ? (it.solution || '') :
+                                (it.text || '');
   target.dataset.editing = '1';
-  target.dataset.kind = isSolution ? 'solution' : 'text';
+  target.dataset.kind = kind;
   target.contentEditable = 'true';
   target.spellcheck = true;
   target.textContent = raw;
@@ -778,18 +851,30 @@ $list.addEventListener('focusout', async (e) => {
   const it = getItem(li?.dataset.id);
   if (!it) { setTimeout(flushQueuedRender, 0); return; }
   const newValue = (target.textContent || '').trim();
-  const isSolution = target.dataset.kind === 'solution';
+  const kind = target.dataset.kind || 'text';
   target.dataset.editing = '0';
   // Keep contenteditable=true so a subsequent click re-enters edit mode without focus tricks.
-  const original = isSolution ? (it.solution || '') : (it.text || '');
+
+  const original =
+    kind === 'ai_suggestions' ? (it.ai_suggestions || '') :
+    kind === 'solution'       ? (it.solution || '') :
+                                (it.text || '');
   if (newValue === original) { target.innerHTML = renderMarkdown(original); setTimeout(flushQueuedRender, 0); return; }
-  if (!isSolution && !newValue) { target.innerHTML = renderMarkdown(it.text); setTimeout(flushQueuedRender, 0); return; }
-  const patch = isSolution ? { solution: newValue || null } : { text: newValue };
+  if (kind === 'text' && !newValue) { target.innerHTML = renderMarkdown(it.text); setTimeout(flushQueuedRender, 0); return; }
+
+  const patch =
+    kind === 'ai_suggestions' ? { ai_suggestions: newValue || null } :
+    kind === 'solution'       ? { solution: newValue || null } :
+                                { text: newValue };
   try {
     const updated = await Api.updateItem(it.id, patch);
     const i = state.items.findIndex((x) => x.id === updated.id);
     if (i>=0) state.items[i] = updated;
-    target.innerHTML = renderMarkdown(isSolution ? (updated.solution || '') : updated.text);
+    const newRaw =
+      kind === 'ai_suggestions' ? (updated.ai_suggestions || '') :
+      kind === 'solution'       ? (updated.solution || '') :
+                                  updated.text;
+    target.innerHTML = renderMarkdown(newRaw);
   } catch (err) { console.error(err); target.innerHTML = renderMarkdown(original); }
   finally { setTimeout(flushQueuedRender, 0); }
 });
