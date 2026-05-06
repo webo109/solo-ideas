@@ -422,7 +422,7 @@ function regularItemNode(it, proj) {
       <span class="item__check-mark"></span>
     </button>
     <div class="item__body">
-      <div class="item__text" data-md>${renderMarkdown(it.text)}</div>
+      <div class="item__text" data-md contenteditable="${isArchive ? 'false' : 'true'}" spellcheck="false">${renderMarkdown(it.text)}</div>
       ${showSolution ? renderSolutionBlock(it) : ''}
       ${suggestionsBlock}
     </div>
@@ -475,7 +475,7 @@ function renderSolutionBlock(it) {
   if (it.solution) {
     return `<div class="item__solution">
       <div class="item__solution-label">Solution</div>
-      <div class="solution__text" data-md>${renderMarkdown(it.solution)}</div>
+      <div class="solution__text" data-md contenteditable="true" spellcheck="false">${renderMarkdown(it.solution)}</div>
     </div>`;
   }
   return `<button class="item__add-solution" type="button" data-action="add-solution">+ Add Solution</button>`;
@@ -780,7 +780,7 @@ $list.addEventListener('focusout', async (e) => {
   const newValue = (target.textContent || '').trim();
   const isSolution = target.dataset.kind === 'solution';
   target.dataset.editing = '0';
-  target.contentEditable = 'false';
+  // Keep contenteditable=true so a subsequent click re-enters edit mode without focus tricks.
   const original = isSolution ? (it.solution || '') : (it.text || '');
   if (newValue === original) { target.innerHTML = renderMarkdown(original); setTimeout(flushQueuedRender, 0); return; }
   if (!isSolution && !newValue) { target.innerHTML = renderMarkdown(it.text); setTimeout(flushQueuedRender, 0); return; }

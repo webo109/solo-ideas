@@ -370,13 +370,24 @@ input, textarea {
 .item__text h2 { font-size: 1.15rem; }
 .item__text h3 { font-size: 1.05rem; }
 
-[data-md][contenteditable="true"] {
-  outline: 2px solid rgba(225,0,255,0.5); outline-offset: 2px; border-radius: 4px;
-  background: rgba(255,255,255,0.06); min-height: 1.4em;
+[data-md] {
+  transition: background 0.2s ease;
+  cursor: text;
+  outline: none;
+  border-radius: 4px;
+}
+[data-md][contenteditable="true"]:hover,
+[data-md][contenteditable="true"]:focus {
+  background: rgba(255,255,255,0.04);
+}
+[data-md][data-editing="1"],
+[data-md][contenteditable="true"]:focus {
+  outline: 2px solid rgba(225,0,255,0.45);
+  outline-offset: 3px;
+  background: rgba(255,255,255,0.06);
+  min-height: 1.4em;
   white-space: pre-wrap;
 }
-[data-md] { transition: background 0.2s ease; cursor: text; }
-[data-md]:hover:not([contenteditable="true"]) { background: rgba(255,255,255,0.04); }
 
 .item--done .item__text { text-decoration: line-through; }
 
